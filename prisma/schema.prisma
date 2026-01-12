@@ -1,0 +1,215 @@
+/**
+ * Prisma Schema for Maternal Health Support Backend
+ * 
+ * ORM CHOICE: Prisma
+ * 
+ * JUSTIFICATION:
+ * - Type-safe database client with excellent TypeScript support
+ * - Intuitive schema definition language
+ * - Automatic migration generation
+ * - Built-in connection pooling
+ * - Great developer experience with Prisma Studio
+ * - Strong PostgreSQL support
+ * 
+ * CLINICAL SAFETY PRINCIPLES:
+ * - Data minimization enforced at schema level
+ * - No free-text medical fields
+ * - Enums for controlled vocabularies
+ * - Timestamps for audit trails
+ * - Strict validation rules
+ */
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/**
+ * UserAuth Entity
+ * 
+ * CLINICAL SAFETY CONSTRAINTS:
+ * - Minimal PII only (email OR phone, not both required)
+ * - No health data in this table
+ * - No logging of credentials
+ * - Passwords are hashed (never stored in plain text)
+ * 
+ * DATA MINIMIZATION:
+ * - Only authentication-related fields
+ * - No names, addresses, or demographic data
+ * - Health data stored in separate UserProfile table
+ */
+model UserAuth {
+  id            String   @id @default(uuid())
+  email         String?  @unique
+  phone         String?  @unique
+  passwordHash  String   // bcrypt hashed password
+  refreshToken  String?  // For JWT refresh token rotation
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relation to UserProfile (optional - created after registration)
+  profile       UserProfile?
+
+  // Relation to BloodPressureReadings
+  bloodPressureReadings BloodPressureReading[]
+
+  // Relation to SymptomRecords
+  symptomRecords SymptomRecord[]
+
+  @@index([email])
+  @@index([phone])
+  @@map("user_auth")
+}
+
+/**
+ * Age Range Enum
+ * 
+ * DATA MINIMIZATION:
+ * - Use age ranges instead of exact DOB
+ * - Prevents unnecessary PII collection
+ */
+enum AgeRange {
+  UNDER_18
+  AGE_18_34
+  AGE_35_PLUS
+}
+
+/**
+ * Known Conditions Enum
+ * 
+ * CLINICAL SAFETY:
+ * - Enumerated list prevents free-text medical history
+ * - Only high-risk pregnancy conditions relevant to hypertension
+ * - No diagnostic information stored
+ */
+enum KnownCondition {
+  CHRONIC_HYPERTENSION
+  GESTATIONAL_DIABETES
+  PREECLAMPSIA_HISTORY
+  KIDNEY_DISEASE
+  AUTOIMMUNE_DISORDER
+  MULTIPLE_PREGNANCY
+  NONE
+}
+
+/**
+ * UserProfile Entity
+ * 
+ * DATA MINIMIZATION PRINCIPLES:
+ * - No DOB (age range only)
+ * - No address
+ * - No free-text medical history
+ * - No name or demographic data
+ * - Only pregnancy-relevant information
+ * 
+ * CLINICAL SAFETY:
+ * - All fields are enumerated or structured
+ * - No diagnostic interpretations stored
+ * - Links to UserAuth via userId
+ */
+model UserProfile {
+  id                String           @id @default(uuid())
+  userId            String           @unique
+  ageRange          AgeRange
+  pregnancyWeeks    Int              // Current week of pregnancy (0-42)
+  firstPregnancy    Boolean
+  knownConditions   KnownCondition[] // Array of enumerated conditions
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  // Relation to UserAuth
+  userAuth          UserAuth         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("user_profile")
+}
+
+/**
+ * Blood Pressure Reading Entity
+ * 
+ * CLINICAL SAFETY CONSTRAINTS:
+ * - Manual entry only (no device integration)
+ * - Do NOT label readings as normal/abnormal
+ * - Do NOT store interpretations
+ * - Neutral data handling only
+ * 
+ * VALIDATION:
+ * - Systolic: 60-260 mmHg (physiologically possible range)
+ * - Diastolic: 40-160 mmHg (physiologically possible range)
+ * - Timestamp for temporal tracking
+ * 
+ * PURPOSE:
+ * - Store raw BP measurements
+ * - Used by care priority engine (Phase 3)
+ * - No diagnostic labels attached to data
+ */
+model BloodPressureReading {
+  id          String   @id @default(uuid())
+  userId      String
+  systolic    Int      // mmHg (60-260)
+  diastolic   Int      // mmHg (40-160)
+  recordedAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  // Relation to UserAuth
+  userAuth    UserAuth @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([recordedAt])
+  @@map("blood_pressure_reading")
+}
+
+/**
+ * Symptom Type Enum
+ * 
+ * CLINICAL SAFETY:
+ * - Enumerated list of pregnancy hypertension warning signs
+ * - No free-text symptoms
+ * - No severity levels
+ * - Based on clinical guidelines for preeclampsia/eclampsia
+ */
+enum SymptomType {
+  HEADACHE                  // Severe or persistent headache
+  BLURRED_VISION            // Visual disturbances
+  SWELLING                  // Edema (face, hands, feet)
+  UPPER_ABDOMINAL_PAIN      // Right upper quadrant pain
+  REDUCED_URINE             // Decreased urine output
+  NAUSEA_VOMITING           // Persistent nausea/vomiting
+  SHORTNESS_OF_BREATH       // Difficulty breathing
+}
+
+/**
+ * Symptom Record Entity
+ * 
+ * CLINICAL SAFETY CONSTRAINTS:
+ * - Atomic recording (one symptom per record)
+ * - No severity levels
+ * - No numeric scoring
+ * - No interpretation or diagnosis
+ * 
+ * PURPOSE:
+ * - Track presence of warning symptoms
+ * - Used by care priority engine for escalation
+ * - Each symptom is a separate, timestamped record
+ */
+model SymptomRecord {
+  id          String      @id @default(uuid())
+  userId      String
+  symptomType SymptomType
+  recordedAt  DateTime    @default(now())
+  createdAt   DateTime    @default(now())
+
+  // Relation to UserAuth
+  userAuth    UserAuth    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([recordedAt])
+  @@index([symptomType])
+  @@map("symptom_record")
+}
+
+
