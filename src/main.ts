@@ -3,14 +3,7 @@ import { ValidationPipe } from "@nestjs/common";
 import { AppModule } from "./app.module";
 import * as compression from "compression";
 import helmet from "helmet";
-
-/**
- * CLINICAL SAFETY NOTICE:
- * This application is a CARE-SUPPORT and ESCALATION TOOL.
- * It is NOT a diagnostic system.
- * It is NOT a medical device.
- * It provides early warning awareness for high blood pressure disorders in pregnancy.
- */
+import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -20,13 +13,17 @@ async function bootstrap() {
   // =============================================
 
   // 1. HELMET: Sets various HTTP headers for security
-  app.use(helmet());
+  // Disable CSP for Swagger UI to load correctly
+  app.use(helmet({
+    contentSecurityPolicy: false,
+  }));
 
   // 2. CORS: Restrict cross-origin access
   app.enableCors({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000", // Restrict to frontend domain
-    methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+    origin: "*", // For development, allow all origins
+    methods: "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
     credentials: true,
+    allowedHeaders: "Content-Type, Accept, Authorization",
   });
 
   // 3. COMPRESSION: Gzip compression for smaller payloads
@@ -48,12 +45,23 @@ async function bootstrap() {
   // API prefix
   app.setGlobalPrefix("api/v1");
 
+  // 5. SWAGGER DOCUMENTATION
+  const config = new DocumentBuilder()
+    .setTitle('Maternal Health Support API')
+    .setDescription('Clinical-safe maternal health support backend - Care escalation tool (NOT a diagnostic system)')
+    .setVersion('1.0')
+    .addBearerAuth()
+    .build();
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api/v1/docs', app, document);
+
   const port = process.env.PORT || 3000;
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
 
   console.log(`\n🏥 Maternal Health Support Backend`);
   console.log(`⚠️  CARE-SUPPORT TOOL - NOT A DIAGNOSTIC SYSTEM`);
-  console.log(`🚀 Server running on: http://localhost:${port}/api/v1\n`);
+  console.log(`🚀 Server running on: http://localhost:${port}/api/v1`);
+  console.log(`📡 Network access: http://192.168.164.47:${port}/api/v1\n`);
 }
 
 bootstrap();

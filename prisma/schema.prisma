@@ -20,7 +20,8 @@
  */
 
 generator client {
-  provider = "prisma-client-js"
+  provider   = "prisma-client-js"
+  engineType = "library"
 }
 
 datasource db {
@@ -211,5 +212,3 @@ model SymptomRecord {
   @@index([symptomType])
   @@map("symptom_record")
 }
-
-

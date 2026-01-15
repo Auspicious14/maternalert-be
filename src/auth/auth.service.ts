@@ -44,6 +44,7 @@ export class AuthService {
    * - No duplicate email/phone
    */
   async register(registerDto: RegisterDto): Promise<AuthResponseDto> {
+    this.logger.log(`Registration attempt for: ${registerDto.email || registerDto.phone}`);
     const { email, phone, password } = registerDto;
 
     // Validate that at least one identifier is provided
@@ -68,18 +69,20 @@ export class AuthService {
     const passwordHash = await bcrypt.hash(password, this.SALT_ROUNDS);
 
     // Create user
-    const user = await this.prisma.userAuth.create({
-      data: {
-        email,
-        phone,
-        passwordHash,
-      },
-    });
-
-    this.logger.log(`New user registered: ${user.id}`);
-
-    // Generate tokens
-    return this.generateTokens(user.id);
+    try {
+      const user = await this.prisma.userAuth.create({
+        data: {
+          email,
+          phone,
+          passwordHash,
+        },
+      });
+      this.logger.log(`New user registered: ${user.id}`);
+      return this.generateTokens(user.id);
+    } catch (error: any) {
+      this.logger.error(`Database error during registration: ${error.message}`, error.stack);
+      throw error;
+    }
   }
 
   /**

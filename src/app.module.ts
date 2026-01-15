@@ -10,16 +10,7 @@ import { SymptomsModule } from "./symptoms/symptoms.module";
 import { CarePriorityModule } from "./care-priority/care-priority.module";
 import { NotificationsModule } from "./notifications/notifications.module";
 import { EducationModule } from "./education/education.module";
-
-/**
- * Root application module
- *
- * ARCHITECTURE PRINCIPLES:
- * - Modular, domain-driven design
- * - Each module encapsulates a specific domain concern
- * - No cross-module business logic dependencies (use services)
- * - Data minimization throughout
- */
+import { AppController } from "./app.controller";
 
 @Module({
   imports: [
@@ -32,7 +23,7 @@ import { EducationModule } from "./education/education.module";
     // Database (Prisma) - Global module
     DatabaseModule,
 
-    // Domain modules (empty for now, will be implemented step by step)
+    // Domain modules
     AuthModule,
     UserProfileModule,
     BloodPressureModule,
@@ -41,5 +32,6 @@ import { EducationModule } from "./education/education.module";
     NotificationsModule,
     EducationModule,
   ],
+  controllers: [AppController],
 })
 export class AppModule {}

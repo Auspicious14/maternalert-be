@@ -4,7 +4,9 @@ import {
   OnModuleDestroy,
   Logger,
 } from "@nestjs/common";
-import { PrismaClient } from "@prisma/client/extension";
+import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg";
 
 /**
  * Prisma Service
@@ -27,7 +29,23 @@ export class PrismaService
   private readonly logger = new Logger(PrismaService.name);
 
   constructor() {
+    const pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      max: 10, // Maintain up to 10 connections
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 10000,
+      ssl: {
+        rejectUnauthorized: false, // Required for Neon in some environments
+      },
+    });
+    
+    // Log pool errors
+    pool.on('error', (err) => {
+      this.logger.error('Unexpected error on idle client', err);
+    });
+
     super({
+      adapter: new PrismaPg(pool),
       log:
         process.env.NODE_ENV === "development"
           ? ["query", "info", "warn", "error"]
