@@ -80,6 +80,20 @@ enum AgeRange {
 }
 
 /**
+ * Emergency Contact Relationship Enum
+ *
+ * DATA MINIMIZATION:
+ * - Relationship type only (no names stored)
+ * - Supports midwife or closest relative
+ */
+enum EmergencyContactRelationship {
+  MIDWIFE
+  PARTNER
+  FAMILY_MEMBER
+  OTHER
+}
+
+/**
  * Known Conditions Enum
  * 
  * CLINICAL SAFETY:
@@ -119,6 +133,8 @@ model UserProfile {
   pregnancyWeeks    Int              // Current week of pregnancy (0-42)
   firstPregnancy    Boolean
   knownConditions   KnownCondition[] // Array of enumerated conditions
+  emergencyContactPhone         String?                       // Phone number only (no name)
+  emergencyContactRelationship  EmergencyContactRelationship? // Relationship enum (e.g. MIDWIFE, PARTNER)
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
 

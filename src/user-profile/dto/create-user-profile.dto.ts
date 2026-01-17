@@ -1,5 +1,22 @@
-import { IsEnum, IsBoolean, IsInt, Min, Max, IsArray } from "class-validator";
+import {
+  IsEnum,
+  IsBoolean,
+  IsInt,
+  Min,
+  Max,
+  IsArray,
+  IsOptional,
+  IsString,
+  Matches,
+} from "class-validator";
 import { AgeRange, KnownCondition } from "@prisma/client";
+
+enum EmergencyContactRelationshipDto {
+  MIDWIFE = "MIDWIFE",
+  PARTNER = "PARTNER",
+  FAMILY_MEMBER = "FAMILY_MEMBER",
+  OTHER = "OTHER",
+}
 
 /**
  * Create User Profile DTO
@@ -8,6 +25,7 @@ import { AgeRange, KnownCondition } from "@prisma/client";
  * - Age range (not DOB)
  * - Pregnancy information only
  * - Enumerated conditions only
+ * - Optional emergency contact (phone + relationship)
  *
  * VALIDATION:
  * - Pregnancy weeks: 0-42 (typical pregnancy duration)
@@ -28,4 +46,15 @@ export class CreateUserProfileDto {
   @IsArray()
   @IsEnum(KnownCondition, { each: true })
   knownConditions!: KnownCondition[];
+
+  @IsOptional()
+  @IsEnum(EmergencyContactRelationshipDto)
+  emergencyContactRelationship?: EmergencyContactRelationshipDto;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^[0-9+\-() ]{7,20}$/, {
+    message: "Emergency contact phone must be a valid phone number format",
+  })
+  emergencyContactPhone?: string;
 }

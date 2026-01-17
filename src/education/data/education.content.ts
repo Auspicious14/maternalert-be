@@ -5,6 +5,9 @@ export interface EducationArticle {
   summary: string;
   content: string; // Plain text or safe markdown
   readTimeMinutes: number;
+  source: string;
+  sourceUrl?: string;
+  videoUrl?: string;
 }
 
 /**
@@ -13,7 +16,7 @@ export interface EducationArticle {
  * CLINICAL SAFETY:
  * - Hardcoded content to ensure clinical accuracy
  * - No dynamic generation
- * - Curated from reputable sources (ACOG, WHO)
+ * - Curated from reputable sources (ACOG, WHO, Preeclampsia Foundation)
  * - Non-alarmist language
  */
 export const EDUCATION_CONTENT: EducationArticle[] = [
@@ -30,6 +33,11 @@ export const EDUCATION_CONTENT: EducationArticle[] = [
 
 In pregnancy, it's important to keep track of these numbers. A normal reading is typically below 120/80 mmHg. If your numbers are higher, your healthcare provider will want to monitor you more closely to ensure both you and your baby stay healthy.`,
     readTimeMinutes: 3,
+    source: "World Health Organization (WHO) patient information on hypertension in pregnancy",
+    sourceUrl:
+      "https://www.who.int/health-topics/hypertension#tab=tab_1",
+    videoUrl:
+      "https://www.preeclampsia.org/video-library",
   },
   {
     id: "warning-signs",
@@ -48,6 +56,12 @@ In pregnancy, it's important to keep track of these numbers. A normal reading is
 
 If you are unsure, it is always safer to call your provider and ask.`,
     readTimeMinutes: 4,
+    source:
+      "Preeclampsia Foundation - 7 Signs and Symptoms Every Pregnant Woman Should Know",
+    sourceUrl:
+      "https://www.preeclampsia.org/health-information/signs-and-symptoms",
+    videoUrl:
+      "https://www.preeclampsia.org/video-library",
   },
   {
     id: "nutrition-hypertension",
@@ -63,6 +77,11 @@ If you are unsure, it is always safer to call your provider and ask.`,
 
 Always talk to your doctor or a nutritionist before making major changes to your diet.`,
     readTimeMinutes: 3,
+    source:
+      "American College of Obstetricians and Gynecologists (ACOG) – Nutrition During Pregnancy",
+    sourceUrl:
+      "https://www.acog.org/womens-health/faqs/nutrition-during-pregnancy",
+    videoUrl: undefined,
   },
   {
     id: "postpartum-care",
@@ -76,5 +95,11 @@ Some conditions, like postpartum preeclampsia, can occur even after the baby is 
 
 Make sure to attend your postpartum check-ups so your provider can ensure you are healing well.`,
     readTimeMinutes: 2,
+    source:
+      "American College of Obstetricians and Gynecologists (ACOG) – Postpartum Preeclampsia information",
+    sourceUrl:
+      "https://www.acog.org/womens-health/faqs/preeclampsia-and-high-blood-pressure-during-pregnancy",
+    videoUrl:
+      "https://www.preeclampsia.org/video-library",
   },
 ];

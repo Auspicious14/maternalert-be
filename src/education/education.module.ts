@@ -14,5 +14,9 @@ import { EducationService } from "./education.service";
  * To be implemented in STEP 10
  */
 
-@Module({})
+@Module({
+  controllers: [EducationController],
+  providers: [EducationService],
+  exports: [EducationService],
+})
 export class EducationModule {}

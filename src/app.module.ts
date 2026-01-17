@@ -10,6 +10,7 @@ import { SymptomsModule } from "./symptoms/symptoms.module";
 import { CarePriorityModule } from "./care-priority/care-priority.module";
 import { NotificationsModule } from "./notifications/notifications.module";
 import { EducationModule } from "./education/education.module";
+import { ClinicFinderModule } from "./clinic-finder/clinic-finder.module";
 import { AppController } from "./app.controller";
 
 @Module({
@@ -31,6 +32,7 @@ import { AppController } from "./app.controller";
     CarePriorityModule,
     NotificationsModule,
     EducationModule,
+    ClinicFinderModule,
   ],
   controllers: [AppController],
 })

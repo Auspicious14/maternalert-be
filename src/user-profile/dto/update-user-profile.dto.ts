@@ -6,12 +6,21 @@ import {
   Max,
   IsArray,
   IsOptional,
+  IsString,
+  Matches,
 } from "class-validator";
 import { AgeRange, KnownCondition } from "@prisma/client";
 
+enum EmergencyContactRelationshipUpdateDto {
+  MIDWIFE = "MIDWIFE",
+  PARTNER = "PARTNER",
+  FAMILY_MEMBER = "FAMILY_MEMBER",
+  OTHER = "OTHER",
+}
+
 /**
  * Update User Profile DTO
- *
+ * 
  * All fields optional for partial updates
  */
 export class UpdateUserProfileDto {
@@ -33,4 +42,15 @@ export class UpdateUserProfileDto {
   @IsArray()
   @IsEnum(KnownCondition, { each: true })
   knownConditions?: KnownCondition[];
+
+  @IsOptional()
+  @IsEnum(EmergencyContactRelationshipUpdateDto)
+  emergencyContactRelationship?: EmergencyContactRelationshipUpdateDto;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^[0-9+\-() ]{7,20}$/, {
+    message: "Emergency contact phone must be a valid phone number format",
+  })
+  emergencyContactPhone?: string;
 }
