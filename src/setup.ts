@@ -1,5 +1,5 @@
 import { INestApplication, ValidationPipe } from "@nestjs/common";
-import * as compression from "compression";
+import compression from "compression";
 import helmet from "helmet";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 
