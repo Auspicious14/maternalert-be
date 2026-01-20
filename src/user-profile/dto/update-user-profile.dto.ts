@@ -68,4 +68,20 @@ export class UpdateUserProfileDto {
     message: "Clinic phone must be a valid phone number format",
   })
   clinicPhone?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  notifyCarePriority?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  notifyBpAlert?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  notifySymptomAlert?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  notifyReminders?: boolean;
 }

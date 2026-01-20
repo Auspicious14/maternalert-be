@@ -61,6 +61,9 @@ model UserAuth {
   // Relation to SymptomRecords
   symptomRecords SymptomRecord[]
 
+  // Relation to Notifications
+  notifications Notification[]
+
   @@index([email])
   @@index([phone])
   @@map("user_auth")
@@ -140,6 +143,12 @@ model UserProfile {
   clinicName    String?
   clinicAddress String?
   clinicPhone   String?
+  
+  // Notification Preferences
+  notifyCarePriority Boolean @default(true)
+  notifyBpAlert      Boolean @default(true)
+  notifySymptomAlert Boolean @default(true)
+  notifyReminders    Boolean @default(true)
   
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
@@ -233,4 +242,37 @@ model SymptomRecord {
   @@index([recordedAt])
   @@index([symptomType])
   @@map("symptom_record")
+}
+
+/**
+ * Notification Type Enum
+ */
+enum NotificationType {
+  CARE_PRIORITY
+  BP_ALERT
+  SYMPTOM_ALERT
+  REMINDER
+}
+
+/**
+ * Notification Entity
+ * 
+ * PURPOSE:
+ * - Store history of alerts and notifications
+ * - Track read status
+ */
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  
+  userAuth  UserAuth         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("notification")
 }
