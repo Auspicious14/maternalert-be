@@ -135,6 +135,12 @@ model UserProfile {
   knownConditions   KnownCondition[] // Array of enumerated conditions
   emergencyContactPhone         String?                       // Phone number only (no name)
   emergencyContactRelationship  EmergencyContactRelationship? // Relationship enum (e.g. MIDWIFE, PARTNER)
+  
+  // Clinic Information
+  clinicName    String?
+  clinicAddress String?
+  clinicPhone   String?
+  
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
 

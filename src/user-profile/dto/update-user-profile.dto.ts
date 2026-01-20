@@ -53,4 +53,19 @@ export class UpdateUserProfileDto {
     message: "Emergency contact phone must be a valid phone number format",
   })
   emergencyContactPhone?: string;
+
+  @IsOptional()
+  @IsString()
+  clinicName?: string;
+
+  @IsOptional()
+  @IsString()
+  clinicAddress?: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^[0-9+\-() ]{7,20}$/, {
+    message: "Clinic phone must be a valid phone number format",
+  })
+  clinicPhone?: string;
 }
