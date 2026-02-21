@@ -102,4 +102,76 @@ Make sure to attend your postpartum check-ups so your provider can ensure you ar
     videoUrl:
       "https://www.preeclampsia.org/video-library",
   },
+  {
+    id: "preeclampsia-eclampsia-overview",
+    title: "Preeclampsia and Eclampsia: What You Should Know",
+    category: "HYPERTENSION",
+    summary:
+      "Overview of causes, warning signs, and care for preeclampsia and eclampsia.",
+    content: `Preeclampsia is a blood pressure condition that usually develops after 20 weeks of pregnancy. It involves high blood pressure and signs that organs such as the kidneys or liver are under strain. If it is not treated, it can progress to eclampsia, which includes seizures. Early recognition and close medical care greatly reduce the chance of serious problems.
+
+Diagnosis
+
+- Blood pressure at or above 140/90 mmHg on more than one occasion
+- Protein in the urine (proteinuria)
+- Sometimes other changes in blood tests or organ function
+
+Risk factors
+
+- First pregnancy
+- Multiple pregnancy (twins, triplets, etc.)
+- History of high blood pressure, diabetes, kidney disease, or autoimmune disease
+- Obesity
+- Family history of preeclampsia
+
+Warning symptoms
+
+- Severe or persistent headache
+- Changes in vision (blurred vision, flashing lights, or spots)
+- Pain in the upper right side of the abdomen
+- Nausea or vomiting after the first trimester
+- Sudden swelling of the face, hands, or around the eyes
+- Shortness of breath
+
+Possible complications
+
+- Seizures (eclampsia)
+- HELLP syndrome (problems with the liver and blood clotting)
+- Problems with the kidneys, liver, brain, or lungs
+- Placental abruption (the placenta pulling away from the uterus)
+- Restricted growth of the baby or early birth
+
+Treatment and monitoring
+
+- Close monitoring of blood pressure, urine, and blood tests
+- Medications to lower blood pressure when needed
+- Magnesium sulfate in some cases to help prevent seizures
+- Corticosteroids to help the baby's lungs if early delivery is likely
+- Timing of birth based on the health of you and your baby
+
+After pregnancy
+
+Preeclampsia can sometimes develop after birth (postpartum preeclampsia), usually within the first six weeks. Headache, vision changes, shortness of breath, or severe pain after delivery should be checked urgently.
+
+Long-term health
+
+Women who have had preeclampsia have a higher chance of high blood pressure, heart disease, and stroke later in life than women who did not. Regular follow-up with a primary care provider is important.
+
+Prevention and self-care
+
+- Attend all antenatal and postpartum visits
+- Have blood pressure and urine checked as recommended
+- Report warning symptoms promptly
+- Follow advice on healthy eating, activity, and weight management when appropriate
+- Take low-dose aspirin and calcium supplements if recommended by your care team
+
+This summary is based on guidance from the World Health Organization and other international expert groups.`,
+    readTimeMinutes: 8,
+    source:
+      "World Health Organization (WHO) and international guidelines on preeclampsia and eclampsia",
+    sourceUrl:
+      "https://www.who.int/health-topics/hypertension#tab=tab_1",
+    videoUrl:
+      "https://www.msdmanuals.com/professional/multimedia/video/overview-of-preeclampsia-and-eclampsia?utm_source=chatgpt.com",
+  },
 ];
