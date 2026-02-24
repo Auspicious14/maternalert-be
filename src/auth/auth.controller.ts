@@ -1,9 +1,18 @@
-import { Controller, Post, Body, HttpCode, HttpStatus } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Req,
+  UseGuards,
+} from "@nestjs/common";
 import { AuthService } from "./auth.service";
 import { RegisterDto } from "./dto/register.dto";
 import { LoginDto } from "./dto/login.dto";
 import { RefreshTokenDto } from "./dto/refresh-token.dto";
 import { AuthResponseDto } from "./dto/auth-response.dto";
+import { JwtAuthGuard } from "./guards/jwt-auth.guard";
 
 /**
  * Authentication Controller
@@ -59,5 +68,19 @@ export class AuthController {
     @Body() refreshTokenDto: RefreshTokenDto
   ): Promise<AuthResponseDto> {
     return this.authService.refreshToken(refreshTokenDto.refreshToken);
+  }
+
+  /**
+   * Logout user
+   *
+   * SECURITY:
+   * - Requires valid access token
+   * - Clears stored refresh token so it cannot be reused
+   */
+  @Post("logout")
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async logout(@Req() req: any): Promise<void> {
+    await this.authService.logout(req.user.id);
   }
 }

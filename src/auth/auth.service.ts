@@ -163,6 +163,21 @@ export class AuthService {
   }
 
   /**
+   * Logout user by invalidating stored refresh token
+   *
+   * SECURITY:
+   * - Clears refresh token from database so it can no longer be used
+   */
+  async logout(userId: string): Promise<void> {
+    await this.prisma.userAuth.update({
+      where: { id: userId },
+      data: { refreshToken: null },
+    });
+
+    this.logger.log(`User logged out: ${userId}`);
+  }
+
+  /**
    * Generate JWT access and refresh tokens
    *
    * SECURITY:
