@@ -11,39 +11,22 @@ import {
   HttpCode,
   HttpStatus,
   ParseIntPipe,
+  Inject,
+  forwardRef,
 } from "@nestjs/common";
 import { BloodPressureService } from "./blood-pressure.service";
 import { CreateBloodPressureDto } from "./dto/create-blood-pressure.dto";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
-
-/**
- * Blood Pressure Controller
- *
- * ENDPOINTS:
- * - POST /blood-pressure - Log new BP reading (authenticated)
- * - GET /blood-pressure - Get all readings (authenticated)
- * - GET /blood-pressure/latest - Get latest reading (authenticated)
- * - DELETE /blood-pressure/:id - Delete reading (authenticated)
- *
- * CLINICAL SAFETY:
- * - All endpoints require authentication
- * - Users can only access their own readings
- * - No interpretation or labeling of readings
- * - Neutral data handling only
- */
+import { HealthAssessmentService } from "../care-priority/health-assessment.service";
 
 @Controller("blood-pressure")
 @UseGuards(JwtAuthGuard)
 export class BloodPressureController {
-  constructor(private readonly bloodPressureService: BloodPressureService) {}
+  constructor(
+    private readonly bloodPressureService: BloodPressureService,
+    private readonly healthAssessmentService: HealthAssessmentService
+  ) {}
 
-  /**
-   * Log a new blood pressure reading
-   *
-   * @param req - Request with authenticated user
-   * @param createBloodPressureDto - BP data (systolic/diastolic)
-   * @returns Created reading
-   */
   @Post()
   @HttpCode(HttpStatus.CREATED)
   async create(
@@ -51,7 +34,15 @@ export class BloodPressureController {
     @Body() createBloodPressureDto: CreateBloodPressureDto
   ) {
     const userId = req.user.id;
-    return this.bloodPressureService.create(userId, createBloodPressureDto);
+    const reading = await this.bloodPressureService.create(
+      userId,
+      createBloodPressureDto
+    );
+
+    // Trigger health assessment and notifications (don't await to avoid blocking response)
+    this.healthAssessmentService.assessAndNotify(userId);
+
+    return reading;
   }
 
   /**

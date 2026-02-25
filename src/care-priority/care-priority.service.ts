@@ -195,14 +195,13 @@ export class CarePriorityService {
       // INCREASED_MONITORING CHECKS
       // ========================================
 
-      // INCREASED: Borderline BP (130-139 / 85-89)
+      // INCREASED: Borderline BP (130-159 / 85-109)
       if (
         latestBP &&
-        ((latestBP.systolic >= 130 && latestBP.systolic < 140) ||
-          (latestBP.diastolic >= 85 && latestBP.diastolic < 90))
+        (latestBP.systolic >= 130 || latestBP.diastolic >= 85)
       ) {
         priority = CarePriority.INCREASED_MONITORING;
-        reasons.push("Blood pressure in borderline range");
+        reasons.push("Blood pressure reading is above normal range");
       }
 
       // INCREASED: High-risk conditions present

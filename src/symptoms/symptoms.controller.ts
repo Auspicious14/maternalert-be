@@ -15,35 +15,16 @@ import {
 import { SymptomsService } from "./symptoms.service";
 import { CreateSymptomDto } from "./dto/create-symptom.dto";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
-
-/**
- * Symptoms Controller
- *
- * ENDPOINTS:
- * - POST /symptoms - Record new symptom (authenticated)
- * - GET /symptoms - Get all symptoms (authenticated)
- * - GET /symptoms/recent - Get recent symptoms (authenticated)
- * - DELETE /symptoms/:id - Delete symptom (authenticated)
- *
- * CLINICAL SAFETY:
- * - All endpoints require authentication
- * - Users can only access their own symptoms
- * - No severity levels or scoring
- * - Atomic recording only
- */
+import { HealthAssessmentService } from "../care-priority/health-assessment.service";
 
 @Controller("symptoms")
 @UseGuards(JwtAuthGuard)
 export class SymptomsController {
-  constructor(private readonly symptomsService: SymptomsService) {}
+  constructor(
+    private readonly symptomsService: SymptomsService,
+    private readonly healthAssessmentService: HealthAssessmentService
+  ) {}
 
-  /**
-   * Record a new symptom
-   *
-   * @param req - Request with authenticated user
-   * @param createSymptomDto - Symptom data
-   * @returns Created symptom record
-   */
   @Post()
   @HttpCode(HttpStatus.CREATED)
   async create(
@@ -51,7 +32,12 @@ export class SymptomsController {
     @Body() createSymptomDto: CreateSymptomDto
   ) {
     const userId = req.user.id;
-    return this.symptomsService.create(userId, createSymptomDto);
+    const symptom = await this.symptomsService.create(userId, createSymptomDto);
+
+    // Trigger health assessment and notifications
+    this.healthAssessmentService.assessAndNotify(userId);
+
+    return symptom;
   }
 
   /**
