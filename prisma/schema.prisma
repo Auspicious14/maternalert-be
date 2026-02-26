@@ -48,6 +48,8 @@ model UserAuth {
   phone         String?  @unique
   passwordHash  String   // bcrypt hashed password
   refreshToken  String?  // For JWT refresh token rotation
+  resetPasswordToken   String?  // For forgot password
+  resetPasswordExpires DateTime? // For forgot password
   isActive      Boolean  @default(true)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

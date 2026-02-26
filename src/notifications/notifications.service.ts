@@ -6,6 +6,7 @@ import {
   CARE_PRIORITY_TEMPLATES,
   BP_ALERT_TEMPLATES,
   SYMPTOM_ALERT_TEMPLATES,
+  AUTH_TEMPLATES,
 } from "./templates/notification.templates";
 
 /**
@@ -149,6 +150,31 @@ export class NotificationsService {
     });
 
     this.logger.log(`✅ Warning symptom notification saved for user ${userId}`);
+  }
+
+  /**
+   * Send reset password notification
+   */
+  async sendResetPasswordNotification(
+    userId: string,
+    token: string
+  ): Promise<void> {
+    const template = AUTH_TEMPLATES.RESET_PASSWORD;
+
+    this.logger.log(`[AUTH] Reset password request for user ${userId}. Token: ${token}`);
+
+    // In a real app, you would send an email or SMS here
+    // For now, we'll store it as a system notification
+    await this.prisma.notification.create({
+      data: {
+        userId,
+        type: NotificationType.REMINDER, // Using REMINDER as a placeholder for auth-related messages
+        title: template.subject,
+        message: `${template.body} Reset token: ${token}`,
+      },
+    });
+
+    this.logger.log(`✅ Reset password notification saved for user ${userId}`);
   }
 
   /**

@@ -3,14 +3,19 @@ import {
   UnauthorizedException,
   ConflictException,
   Logger,
+  NotFoundException,
 } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { ConfigService } from "@nestjs/config";
 import * as bcrypt from "bcrypt";
+import * as crypto from "crypto";
 import { PrismaService } from "../database/prisma.service";
 import { RegisterDto } from "./dto/register.dto";
 import { LoginDto } from "./dto/login.dto";
 import { AuthResponseDto } from "./dto/auth-response.dto";
+import { ForgotPasswordDto } from "./dto/forgot-password.dto";
+import { ResetPasswordDto } from "./dto/reset-password.dto";
+import { NotificationsService } from "../notifications/notifications.service";
 
 /**
  * Authentication Service
@@ -32,8 +37,83 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
-    private readonly configService: ConfigService
+    private readonly configService: ConfigService,
+    private readonly notificationsService: NotificationsService
   ) {}
+
+  /**
+   * Forgot password request
+   */
+  async forgotPassword(forgotPasswordDto: ForgotPasswordDto): Promise<void> {
+    const { email, phone } = forgotPasswordDto;
+
+    // Find user
+    const user = await this.prisma.userAuth.findFirst({
+      where: {
+        OR: [email ? { email } : {}, phone ? { phone } : {}],
+      },
+    });
+
+    if (!user) {
+      // Don't reveal if user exists for security
+      this.logger.warn(`Forgot password attempt for non-existent user: ${email || phone}`);
+      return;
+    }
+
+    // Generate token (valid for 1 hour)
+    const token = crypto.randomBytes(32).toString("hex");
+    const expires = new Date();
+    expires.setHours(expires.getHours() + 1);
+
+    // Save token
+    await this.prisma.userAuth.update({
+      where: { id: user.id },
+      data: {
+        resetPasswordToken: token,
+        resetPasswordExpires: expires,
+      },
+    });
+
+    // Send reset message (via notification service)
+    await this.notificationsService.sendResetPasswordNotification(user.id, token);
+    
+    this.logger.log(`Password reset token generated for user: ${user.id}`);
+  }
+
+  /**
+   * Reset password with token
+   */
+  async resetPassword(resetPasswordDto: ResetPasswordDto): Promise<void> {
+    const { token, newPassword } = resetPasswordDto;
+
+    // Find user with valid token
+    const user = await this.prisma.userAuth.findFirst({
+      where: {
+        resetPasswordToken: token,
+        resetPasswordExpires: { gt: new Date() },
+      },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException("Invalid or expired reset token");
+    }
+
+    // Hash new password
+    const passwordHash = await bcrypt.hash(newPassword, this.SALT_ROUNDS);
+
+    // Update user
+    await this.prisma.userAuth.update({
+      where: { id: user.id },
+      data: {
+        passwordHash,
+        resetPasswordToken: null,
+        resetPasswordExpires: null,
+        refreshToken: null, // Force logout from all devices
+      },
+    });
+
+    this.logger.log(`Password reset successful for user: ${user.id}`);
+  }
 
   /**
    * Register a new user

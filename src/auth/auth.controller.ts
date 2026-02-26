@@ -12,6 +12,8 @@ import { RegisterDto } from "./dto/register.dto";
 import { LoginDto } from "./dto/login.dto";
 import { RefreshTokenDto } from "./dto/refresh-token.dto";
 import { AuthResponseDto } from "./dto/auth-response.dto";
+import { ForgotPasswordDto } from "./dto/forgot-password.dto";
+import { ResetPasswordDto } from "./dto/reset-password.dto";
 import { JwtAuthGuard } from "./guards/jwt-auth.guard";
 
 /**
@@ -21,6 +23,8 @@ import { JwtAuthGuard } from "./guards/jwt-auth.guard";
  * - POST /auth/register - Register new user
  * - POST /auth/login - Login user
  * - POST /auth/refresh - Refresh access token
+ * - POST /auth/forgot-password - Forgot password request
+ * - POST /auth/reset-password - Reset password with token
  *
  * CLINICAL SAFETY:
  * - No health data collected
@@ -54,6 +58,32 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async login(@Body() loginDto: LoginDto): Promise<AuthResponseDto> {
     return this.authService.login(loginDto);
+  }
+
+  /**
+   * Forgot password request
+   *
+   * @param forgotPasswordDto - Email or phone
+   */
+  @Post("forgot-password")
+  @HttpCode(HttpStatus.OK)
+  async forgotPassword(
+    @Body() forgotPasswordDto: ForgotPasswordDto
+  ): Promise<void> {
+    return this.authService.forgotPassword(forgotPasswordDto);
+  }
+
+  /**
+   * Reset password with token
+   *
+   * @param resetPasswordDto - Token and new password
+   */
+  @Post("reset-password")
+  @HttpCode(HttpStatus.OK)
+  async resetPassword(
+    @Body() resetPasswordDto: ResetPasswordDto
+  ): Promise<void> {
+    return this.authService.resetPassword(resetPasswordDto);
   }
 
   /**

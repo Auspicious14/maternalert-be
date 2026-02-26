@@ -88,3 +88,14 @@ export const SYMPTOM_ALERT_TEMPLATES = {
     callToAction: "Discuss with your healthcare provider.",
   },
 };
+
+/**
+ * Auth Templates
+ */
+export const AUTH_TEMPLATES = {
+  RESET_PASSWORD: {
+    subject: "Reset Your Password",
+    body: "You requested a password reset. Use the link below to set a new password. This link will expire in 1 hour.",
+    callToAction: "Reset your password.",
+  },
+};
