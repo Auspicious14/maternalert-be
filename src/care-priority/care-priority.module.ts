@@ -10,7 +10,7 @@ import { HealthAssessmentService } from "./health-assessment.service";
 @Module({
   imports: [
     forwardRef(() => BloodPressureModule),
-    SymptomsModule,
+    forwardRef(() => SymptomsModule),
     UserProfileModule,
     NotificationsModule,
   ],

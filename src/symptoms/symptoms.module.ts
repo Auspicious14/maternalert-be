@@ -1,6 +1,7 @@
-import { Module } from "@nestjs/common";
+import { Module, forwardRef } from "@nestjs/common";
 import { SymptomsController } from "./symptoms.controller";
 import { SymptomsService } from "./symptoms.service";
+import { CarePriorityModule } from "../care-priority/care-priority.module";
 
 /**
  * Symptoms Module
@@ -18,6 +19,7 @@ import { SymptomsService } from "./symptoms.service";
  */
 
 @Module({
+  imports: [forwardRef(() => CarePriorityModule)],
   controllers: [SymptomsController],
   providers: [SymptomsService],
   exports: [SymptomsService],

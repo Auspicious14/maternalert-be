@@ -11,6 +11,8 @@ import {
   HttpCode,
   HttpStatus,
   ParseIntPipe,
+  Inject,
+  forwardRef,
 } from "@nestjs/common";
 import { SymptomsService } from "./symptoms.service";
 import { CreateSymptomDto } from "./dto/create-symptom.dto";
@@ -22,6 +24,7 @@ import { HealthAssessmentService } from "../care-priority/health-assessment.serv
 export class SymptomsController {
   constructor(
     private readonly symptomsService: SymptomsService,
+    @Inject(forwardRef(() => HealthAssessmentService))
     private readonly healthAssessmentService: HealthAssessmentService
   ) {}
 
