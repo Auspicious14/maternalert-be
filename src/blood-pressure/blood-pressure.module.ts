@@ -1,6 +1,7 @@
-import { Module } from "@nestjs/common";
+import { Module, forwardRef } from "@nestjs/common";
 import { BloodPressureController } from "./blood-pressure.controller";
 import { BloodPressureService } from "./blood-pressure.service";
+import { CarePriorityModule } from "../care-priority/care-priority.module";
 
 /**
  * Blood Pressure Module
@@ -18,6 +19,7 @@ import { BloodPressureService } from "./blood-pressure.service";
  */
 
 @Module({
+  imports: [forwardRef(() => CarePriorityModule)],
   controllers: [BloodPressureController],
   providers: [BloodPressureService],
   exports: [BloodPressureService],

@@ -1,4 +1,4 @@
-import { Module } from "@nestjs/common";
+import { Module, forwardRef } from "@nestjs/common";
 import { CarePriorityService } from "./care-priority.service";
 import { CarePriorityController } from "./care-priority.controller";
 import { BloodPressureModule } from "../blood-pressure/blood-pressure.module";
@@ -9,7 +9,7 @@ import { HealthAssessmentService } from "./health-assessment.service";
 
 @Module({
   imports: [
-    BloodPressureModule,
+    forwardRef(() => BloodPressureModule),
     SymptomsModule,
     UserProfileModule,
     NotificationsModule,
