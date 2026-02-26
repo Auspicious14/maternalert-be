@@ -1,5 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import { PrismaService } from "../database/prisma.service";
+import { EmailService } from "./email.service";
 import { CarePriority } from "../care-priority/types/care-priority.types";
 import { NotificationType } from "@prisma/client";
 import {
@@ -23,7 +25,22 @@ import {
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly emailService: EmailService,
+    private readonly configService: ConfigService
+  ) {}
+
+  /**
+   * Helper to get user's email
+   */
+  private async getUserEmail(userId: string): Promise<string | null> {
+    const user = await this.prisma.userAuth.findUnique({
+      where: { id: userId },
+      select: { email: true },
+    });
+    return user?.email || null;
+  }
 
   /**
    * Send care priority escalation notification
@@ -33,6 +50,7 @@ export class NotificationsService {
     priority: CarePriority
   ): Promise<void> {
     const template = CARE_PRIORITY_TEMPLATES[priority];
+    const email = await this.getUserEmail(userId);
 
     // Log notification
     this.logger.log(`[NOTIFICATION] User: ${userId}, Priority: ${priority}`);
@@ -43,11 +61,21 @@ export class NotificationsService {
         userId,
         type: NotificationType.CARE_PRIORITY,
         title: template.subject,
-        message: template.body,
+        message: `${template.body}\n\n${template.callToAction}`,
       },
     });
 
-    this.logger.log(`✅ Notification saved for user ${userId}`);
+    // Send email
+    if (email) {
+      await this.emailService.sendEmail(
+        email,
+        template.subject,
+        `${template.body}\n\n${template.callToAction}`,
+        `<h2>${template.subject}</h2><p>${template.body}</p><strong>${template.callToAction}</strong>`
+      );
+    }
+
+    this.logger.log(`✅ Notification handled for user ${userId}`);
   }
 
   /**
@@ -59,21 +87,34 @@ export class NotificationsService {
     diastolic: number
   ): Promise<void> {
     const template = BP_ALERT_TEMPLATES.SEVERE_HYPERTENSION;
+    const email = await this.getUserEmail(userId);
 
     this.logger.warn(
       `[ALERT] Severe BP for user ${userId}: ${systolic}/${diastolic}`
     );
+
+    const message = `${template.body}\nReading: ${systolic}/${diastolic}\n\n${template.callToAction}`;
 
     await this.prisma.notification.create({
       data: {
         userId,
         type: NotificationType.BP_ALERT,
         title: template.subject,
-        message: template.body,
+        message,
       },
     });
 
-    this.logger.log(`✅ Severe BP alert saved for user ${userId}`);
+    // Send email
+    if (email) {
+      await this.emailService.sendEmail(
+        email,
+        template.subject,
+        message,
+        `<h2>${template.subject}</h2><p>${template.body}</p><p><strong>Reading: ${systolic}/${diastolic}</strong></p><strong>${template.callToAction}</strong>`
+      );
+    }
+
+    this.logger.log(`✅ Severe BP alert handled for user ${userId}`);
   }
 
   /**
@@ -85,21 +126,34 @@ export class NotificationsService {
     diastolic: number
   ): Promise<void> {
     const template = BP_ALERT_TEMPLATES.ELEVATED_BP;
+    const email = await this.getUserEmail(userId);
 
     this.logger.log(
       `[NOTIFICATION] Elevated BP for user ${userId}: ${systolic}/${diastolic}`
     );
+
+    const message = `${template.body}\nReading: ${systolic}/${diastolic}\n\n${template.callToAction}`;
 
     await this.prisma.notification.create({
       data: {
         userId,
         type: NotificationType.BP_ALERT,
         title: template.subject,
-        message: template.body,
+        message,
       },
     });
 
-    this.logger.log(`✅ Elevated BP notification saved for user ${userId}`);
+    // Send email
+    if (email) {
+      await this.emailService.sendEmail(
+        email,
+        template.subject,
+        message,
+        `<h2>${template.subject}</h2><p>${template.body}</p><p><strong>Reading: ${systolic}/${diastolic}</strong></p><strong>${template.callToAction}</strong>`
+      );
+    }
+
+    this.logger.log(`✅ Elevated BP notification handled for user ${userId}`);
   }
 
   /**
@@ -110,21 +164,34 @@ export class NotificationsService {
     symptoms: string[]
   ): Promise<void> {
     const template = SYMPTOM_ALERT_TEMPLATES.DANGEROUS_COMBINATION;
+    const email = await this.getUserEmail(userId);
 
     this.logger.warn(
       `[ALERT] Dangerous symptoms for user ${userId}: ${symptoms.join(", ")}`
     );
+
+    const message = `${template.body}\nSymptoms reported: ${symptoms.join(", ")}\n\n${template.callToAction}`;
 
     await this.prisma.notification.create({
       data: {
         userId,
         type: NotificationType.SYMPTOM_ALERT,
         title: template.subject,
-        message: template.body,
+        message,
       },
     });
 
-    this.logger.log(`✅ Dangerous symptom alert saved for user ${userId}`);
+    // Send email
+    if (email) {
+      await this.emailService.sendEmail(
+        email,
+        template.subject,
+        message,
+        `<h2>${template.subject}</h2><p>${template.body}</p><p><strong>Symptoms reported: ${symptoms.join(", ")}</strong></p><strong>${template.callToAction}</strong>`
+      );
+    }
+
+    this.logger.log(`✅ Dangerous symptom alert handled for user ${userId}`);
   }
 
   /**
@@ -135,21 +202,34 @@ export class NotificationsService {
     symptom: string
   ): Promise<void> {
     const template = SYMPTOM_ALERT_TEMPLATES.SINGLE_WARNING_SYMPTOM;
+    const email = await this.getUserEmail(userId);
 
     this.logger.log(
       `[NOTIFICATION] Warning symptom for user ${userId}: ${symptom}`
     );
+
+    const message = `${template.body}\nSymptom reported: ${symptom}\n\n${template.callToAction}`;
 
     await this.prisma.notification.create({
       data: {
         userId,
         type: NotificationType.SYMPTOM_ALERT,
         title: template.subject,
-        message: template.body,
+        message,
       },
     });
 
-    this.logger.log(`✅ Warning symptom notification saved for user ${userId}`);
+    // Send email
+    if (email) {
+      await this.emailService.sendEmail(
+        email,
+        template.subject,
+        message,
+        `<h2>${template.subject}</h2><p>${template.body}</p><p><strong>Symptom reported: ${symptom}</strong></p><strong>${template.callToAction}</strong>`
+      );
+    }
+
+    this.logger.log(`✅ Warning symptom notification handled for user ${userId}`);
   }
 
   /**
@@ -160,21 +240,34 @@ export class NotificationsService {
     token: string
   ): Promise<void> {
     const template = AUTH_TEMPLATES.RESET_PASSWORD;
+    const email = await this.getUserEmail(userId);
 
-    this.logger.log(`[AUTH] Reset password request for user ${userId}. Token: ${token}`);
+    this.logger.log(`[AUTH] Reset password request for user ${userId}. Email: ${email || 'N/A'}`);
 
-    // In a real app, you would send an email or SMS here
-    // For now, we'll store it as a system notification
+    const resetLink = `${this.configService.get("FRONTEND_URL")}/reset-password?token=${token}`;
+    const message = `${template.body}\n\nReset Link: ${resetLink}`;
+
+    // Store in database
     await this.prisma.notification.create({
       data: {
         userId,
-        type: NotificationType.REMINDER, // Using REMINDER as a placeholder for auth-related messages
+        type: NotificationType.REMINDER,
         title: template.subject,
-        message: `${template.body} Reset token: ${token}`,
+        message,
       },
     });
 
-    this.logger.log(`✅ Reset password notification saved for user ${userId}`);
+    // Send actual email if available
+    if (email) {
+      await this.emailService.sendEmail(
+        email,
+        template.subject,
+        message,
+        `<p>${template.body}</p><p><a href="${resetLink}">Click here to reset your password</a></p><p>Or copy and paste this link: ${resetLink}</p>`
+      );
+    }
+
+    this.logger.log(`✅ Reset password notification handled for user ${userId}`);
   }
 
   /**
