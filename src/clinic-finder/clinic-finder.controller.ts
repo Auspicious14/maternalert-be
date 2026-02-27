@@ -9,7 +9,20 @@ export class ClinicFinderController {
 
   @Get()
   @HttpCode(HttpStatus.OK)
-  findAll(@Query("city") city?: string) {
+  findAll(
+    @Query("city") city?: string,
+    @Query("lat") lat?: string,
+    @Query("lng") lng?: string,
+    @Query("radius") radius?: string
+  ) {
+    if (lat && lng) {
+      return this.clinicFinderService.findNearby(
+        parseFloat(lat),
+        parseFloat(lng),
+        radius ? parseInt(radius) : 5000
+      );
+    }
+
     if (city) {
       return this.clinicFinderService.findByCity(city);
     }
