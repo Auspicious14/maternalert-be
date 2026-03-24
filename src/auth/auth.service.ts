@@ -251,7 +251,10 @@ export class AuthService {
   async logout(userId: string): Promise<void> {
     await this.prisma.userAuth.update({
       where: { id: userId },
-      data: { refreshToken: null },
+      data: { 
+        refreshToken: null,
+        pushToken: null // Clear push token on logout for security
+      },
     });
 
     this.logger.log(`User logged out: ${userId}`);

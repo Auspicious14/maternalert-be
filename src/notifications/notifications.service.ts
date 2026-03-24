@@ -271,6 +271,17 @@ export class NotificationsService {
   }
 
   /**
+   * Register push token for user
+   */
+  async registerPushToken(userId: string, pushToken: string) {
+    this.logger.log(`Registering push token for user ${userId}`);
+    return this.prisma.userAuth.update({
+      where: { id: userId },
+      data: { pushToken },
+    });
+  }
+
+  /**
    * Get notification history for user
    */
   async getNotificationHistory(userId: string) {
