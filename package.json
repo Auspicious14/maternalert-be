@@ -4,7 +4,7 @@
   "description": "Clinical-safe maternal health support backend - Care escalation tool (NOT a diagnostic system)",
   "main": "dist/main.js",
   "scripts": {
-    "build": "prisma generate && nest build",
+    "build": "prisma generate && prisma migrate deploy && nest build",
     "postinstall": "prisma generate",
     "format": "prettier --write \"src/**/*.ts\"",
     "start": "nest start",
