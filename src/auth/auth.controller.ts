@@ -113,4 +113,17 @@ export class AuthController {
   async logout(@Req() req: any): Promise<void> {
     await this.authService.logout(req.user.id);
   }
+
+  /**
+   * Get current authenticated user
+   *
+   * @param req - Request with authenticated user
+   * @returns Current user details
+   */
+  @Post("me")
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.OK)
+  async getMe(@Req() req: any) {
+    return req.user;
+  }
 }
