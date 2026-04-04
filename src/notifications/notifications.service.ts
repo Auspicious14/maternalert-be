@@ -14,6 +14,7 @@ import {
   MONITORING_TEMPLATES,
   TREND_ALERT_TEMPLATES,
 } from "./templates/notification.templates";
+import { generateEmailHtml } from "./templates/email.template";
 
 /**
  * Notification Service
@@ -114,7 +115,7 @@ export class NotificationsService {
           },
         },
       },
-      select: { id: true },
+      select: { id: true, email: true },
     });
 
     for (const user of users) {
@@ -128,12 +129,31 @@ export class NotificationsService {
         },
       });
 
+      // Send Push
       await this.sendPushNotification(
         user.id,
         template.subject,
         template.body,
         { type: "INACTIVITY_REMINDER" }
       );
+
+      // Send Email
+      if (user.email) {
+        const html = generateEmailHtml(
+          template.subject,
+          template.body,
+          "Log BP Reading",
+          `${this.configService.get("FRONTEND_URL")}/bp-entry`,
+          "#2DE474"
+        );
+
+        await this.emailService.sendEmail(
+          user.email,
+          template.subject,
+          template.body,
+          html
+        );
+      }
     }
     this.logger.log(`Inactivity check finished. ${users.length} users notified.`);
   }
@@ -167,7 +187,7 @@ export class NotificationsService {
           },
         },
       },
-      select: { id: true },
+      select: { id: true, email: true },
     });
 
     for (const user of users) {
@@ -181,12 +201,31 @@ export class NotificationsService {
         },
       });
 
+      // Send Push
       await this.sendPushNotification(
         user.id,
         template.subject,
         template.body,
         { type: "FOLLOW_UP" }
       );
+
+      // Send Email
+      if (user.email) {
+        const html = generateEmailHtml(
+          template.subject,
+          template.body,
+          "Recheck BP Now",
+          `${this.configService.get("FRONTEND_URL")}/bp-entry`,
+          "#FF9B3E"
+        );
+
+        await this.emailService.sendEmail(
+          user.email,
+          template.subject,
+          template.body,
+          html
+        );
+      }
     }
   }
 
@@ -202,7 +241,7 @@ export class NotificationsService {
 
     const users = await this.prisma.userAuth.findMany({
       where: { isActive: true },
-      select: { id: true },
+      select: { id: true, email: true },
     });
 
     for (const user of users) {
@@ -223,14 +262,14 @@ export class NotificationsService {
         else riseCount = 0;
       }
       if (riseCount >= 3) {
-        await this.sendTrendAlert(user.id, TREND_ALERT_TEMPLATES.CREEPING_RISE, "CREEPING_RISE");
+        await this.sendTrendAlert(user.id, TREND_ALERT_TEMPLATES.CREEPING_RISE, "CREEPING_RISE", user.email);
         continue; // Don't spam multiple trend alerts
       }
 
       // 2. Repeated High Readings (3+ elevated readings in a week)
       const highReadings = readings.filter(r => r.systolic >= 135 || r.diastolic >= 85);
       if (highReadings.length >= 3) {
-        await this.sendTrendAlert(user.id, TREND_ALERT_TEMPLATES.REPEATED_HIGH, "REPEATED_HIGH");
+        await this.sendTrendAlert(user.id, TREND_ALERT_TEMPLATES.REPEATED_HIGH, "REPEATED_HIGH", user.email);
         continue;
       }
 
@@ -238,12 +277,12 @@ export class NotificationsService {
       const avgSystolic = readings.slice(0, -1).reduce((acc, curr) => acc + curr.systolic, 0) / (readings.length - 1);
       const latest = readings[readings.length - 1];
       if (latest.systolic > avgSystolic * 1.2) {
-        await this.sendTrendAlert(user.id, TREND_ALERT_TEMPLATES.SUDDEN_SPIKE, "SUDDEN_SPIKE");
+        await this.sendTrendAlert(user.id, TREND_ALERT_TEMPLATES.SUDDEN_SPIKE, "SUDDEN_SPIKE", user.email);
       }
     }
   }
 
-  private async sendTrendAlert(userId: string, template: any, trendType: string) {
+  private async sendTrendAlert(userId: string, template: any, trendType: string, email?: string | null) {
     await this.prisma.notification.create({
       data: {
         userId,
@@ -259,6 +298,23 @@ export class NotificationsService {
       template.body,
       { type: "TREND_ALERT", trendType }
     );
+
+    if (email) {
+      const html = generateEmailHtml(
+        template.subject,
+        template.body,
+        "View Trends",
+        `${this.configService.get("FRONTEND_URL")}/(tabs)/tracking`,
+        "#FF9B3E"
+      );
+
+      await this.emailService.sendEmail(
+        email,
+        template.subject,
+        template.body,
+        html
+      );
+    }
   }
 
   /**
@@ -286,11 +342,19 @@ export class NotificationsService {
 
     // Send email
     if (email) {
+      const html = generateEmailHtml(
+        template.subject,
+        `${template.body}\n\n${template.callToAction}`,
+        "View Details",
+        `${this.configService.get("FRONTEND_URL")}/(tabs)/tracking`,
+        priority === CarePriority.EMERGENCY ? "#FF4B4B" : priority === CarePriority.URGENT_REVIEW ? "#FF9B3E" : "#2DE474"
+      );
+
       await this.emailService.sendEmail(
         email,
         template.subject,
         `${template.body}\n\n${template.callToAction}`,
-        `<h2>${template.subject}</h2><p>${template.body}</p><strong>${template.callToAction}</strong>`
+        html
       );
     }
 
@@ -333,11 +397,19 @@ export class NotificationsService {
 
     // Send email
     if (email) {
+      const html = generateEmailHtml(
+        template.subject,
+        message,
+        "Log Now",
+        `${this.configService.get("FRONTEND_URL")}/bp-entry`,
+        "#FF4B4B"
+      );
+
       await this.emailService.sendEmail(
         email,
         template.subject,
         message,
-        `<h2>${template.subject}</h2><p>${template.body}</p><p><strong>Reading: ${systolic}/${diastolic}</strong></p><strong>${template.callToAction}</strong>`
+        html
       );
     }
 
@@ -380,11 +452,19 @@ export class NotificationsService {
 
     // Send email
     if (email) {
+      const html = generateEmailHtml(
+        template.subject,
+        message,
+        "Log Now",
+        `${this.configService.get("FRONTEND_URL")}/bp-entry`,
+        "#FF9B3E"
+      );
+
       await this.emailService.sendEmail(
         email,
         template.subject,
         message,
-        `<h2>${template.subject}</h2><p>${template.body}</p><p><strong>Reading: ${systolic}/${diastolic}</strong></p><strong>${template.callToAction}</strong>`
+        html
       );
     }
 
@@ -426,11 +506,19 @@ export class NotificationsService {
 
     // Send email
     if (email) {
+      const html = generateEmailHtml(
+        template.subject,
+        message,
+        "Open App",
+        `${this.configService.get("FRONTEND_URL")}/(tabs)/tracking`,
+        "#FF4B4B"
+      );
+
       await this.emailService.sendEmail(
         email,
         template.subject,
         message,
-        `<h2>${template.subject}</h2><p>${template.body}</p><p><strong>Symptoms reported: ${symptoms.join(", ")}</strong></p><strong>${template.callToAction}</strong>`
+        html
       );
     }
 
@@ -472,11 +560,19 @@ export class NotificationsService {
 
     // Send email
     if (email) {
+      const html = generateEmailHtml(
+        template.subject,
+        message,
+        "Open App",
+        `${this.configService.get("FRONTEND_URL")}/(tabs)/tracking`,
+        "#FF9B3E"
+      );
+
       await this.emailService.sendEmail(
         email,
         template.subject,
         message,
-        `<h2>${template.subject}</h2><p>${template.body}</p><p><strong>Symptom reported: ${symptom}</strong></p><strong>${template.callToAction}</strong>`
+        html
       );
     }
 
@@ -518,11 +614,19 @@ export class NotificationsService {
 
     // Send actual email if available
     if (email) {
+      const html = generateEmailHtml(
+        template.subject,
+        template.body,
+        "Reset Password",
+        resetLink,
+        "#1E6BFF" // Use setup blue for auth actions
+      );
+
       await this.emailService.sendEmail(
         email,
         template.subject,
         message,
-        `<p>${template.body}</p><p><a href="${resetLink}">Click here to reset your password</a></p><p>Or copy and paste this link: ${resetLink}</p>`
+        html
       );
     }
 
