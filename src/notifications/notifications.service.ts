@@ -5,7 +5,7 @@ import { PrismaService } from "../database/prisma.service";
 import { EmailService } from "./email.service";
 import { CarePriority } from "../care-priority/types/care-priority.types";
 import { NotificationType } from "@prisma/client";
-import { Expo, ExpoPushMessage } from "expo-server-sdk";
+import type { ExpoPushMessage } from "expo-server-sdk";
 import {
   CARE_PRIORITY_TEMPLATES,
   BP_ALERT_TEMPLATES,
@@ -31,13 +31,24 @@ import { generateEmailHtml } from "./templates/email.template";
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
-  private expo = new Expo();
+  private expoInstance: any = null;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
     private readonly configService: ConfigService
   ) {}
+
+  /**
+   * Helper to get Expo instance dynamically (fixes ERR_REQUIRE_ESM)
+   */
+  private async getExpo() {
+    if (!this.expoInstance) {
+      const { Expo } = await import("expo-server-sdk");
+      this.expoInstance = new Expo();
+    }
+    return this.expoInstance;
+  }
 
   /**
    * Helper to get user's email
@@ -69,6 +80,7 @@ export class NotificationsService {
       return;
     }
 
+    const { Expo } = await import("expo-server-sdk");
     if (!Expo.isExpoPushToken(user.pushToken)) {
       this.logger.error(`Push token ${user.pushToken} is not a valid Expo push token`);
       return;
@@ -85,9 +97,10 @@ export class NotificationsService {
     ];
 
     try {
-      const chunks = this.expo.chunkPushNotifications(messages);
+      const expo = await this.getExpo();
+      const chunks = expo.chunkPushNotifications(messages);
       for (const chunk of chunks) {
-        await this.expo.sendPushNotificationsAsync(chunk);
+        await expo.sendPushNotificationsAsync(chunk);
       }
       this.logger.log(`Push notification sent to user ${userId}`);
     } catch (error) {
