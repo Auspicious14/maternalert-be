@@ -38,7 +38,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
-    private readonly notificationsService: NotificationsService
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   /**
@@ -47,16 +47,25 @@ export class AuthService {
   async forgotPassword(forgotPasswordDto: ForgotPasswordDto): Promise<void> {
     const { email, phone } = forgotPasswordDto;
 
-    // Find user
+    if (!email && !phone) {
+      this.logger.warn("Forgot password attempt with no email or phone");
+      return;
+    }
+
+    // Find user — build conditions dynamically to avoid empty {} matching all rows
+    const conditions: any[] = [];
+    if (email) conditions.push({ email });
+    if (phone) conditions.push({ phone });
+
     const user = await this.prisma.userAuth.findFirst({
-      where: {
-        OR: [email ? { email } : {}, phone ? { phone } : {}],
-      },
+      where: conditions.length === 1 ? conditions[0] : { OR: conditions },
     });
 
     if (!user) {
       // Don't reveal if user exists for security
-      this.logger.warn(`Forgot password attempt for non-existent user: ${email || phone}`);
+      this.logger.warn(
+        `Forgot password attempt for non-existent user: ${email || phone}`,
+      );
       return;
     }
 
@@ -75,8 +84,11 @@ export class AuthService {
     });
 
     // Send reset message (via notification service)
-    await this.notificationsService.sendResetPasswordNotification(user.id, token);
-    
+    await this.notificationsService.sendResetPasswordNotification(
+      user.id,
+      token,
+    );
+
     this.logger.log(`Password reset token generated for user: ${user.id}`);
   }
 
@@ -124,7 +136,9 @@ export class AuthService {
    * - No duplicate email/phone
    */
   async register(registerDto: RegisterDto): Promise<AuthResponseDto> {
-    this.logger.log(`Registration attempt for: ${registerDto.email || registerDto.phone}`);
+    this.logger.log(
+      `Registration attempt for: ${registerDto.email || registerDto.phone}`,
+    );
     const { email, phone, password } = registerDto;
 
     // Validate that at least one identifier is provided
@@ -132,16 +146,18 @@ export class AuthService {
       throw new ConflictException("Either email or phone must be provided");
     }
 
-    // Check for existing user
+    // Check for existing user — build conditions dynamically
+    const conditions: any[] = [];
+    if (email) conditions.push({ email });
+    if (phone) conditions.push({ phone });
+
     const existingUser = await this.prisma.userAuth.findFirst({
-      where: {
-        OR: [email ? { email } : {}, phone ? { phone } : {}],
-      },
+      where: conditions.length === 1 ? conditions[0] : { OR: conditions },
     });
 
     if (existingUser) {
       throw new ConflictException(
-        "User with this email or phone already exists"
+        "User with this email or phone already exists",
       );
     }
 
@@ -160,7 +176,10 @@ export class AuthService {
       this.logger.log(`New user registered: ${user.id}`);
       return this.generateTokens(user.id);
     } catch (error: any) {
-      this.logger.error(`Database error during registration: ${error.message}`, error.stack);
+      this.logger.error(
+        `Database error during registration: ${error.message}`,
+        error.stack,
+      );
       throw error;
     }
   }
@@ -181,11 +200,16 @@ export class AuthService {
       throw new UnauthorizedException("Either email or phone must be provided");
     }
 
-    // Find user
+    // Find user — build conditions dynamically
+    const loginConditions: any[] = [];
+    if (email) loginConditions.push({ email });
+    if (phone) loginConditions.push({ phone });
+
     const user = await this.prisma.userAuth.findFirst({
-      where: {
-        OR: [email ? { email } : {}, phone ? { phone } : {}],
-      },
+      where:
+        loginConditions.length === 1
+          ? loginConditions[0]
+          : { OR: loginConditions },
     });
 
     if (!user) {
@@ -251,9 +275,9 @@ export class AuthService {
   async logout(userId: string): Promise<void> {
     await this.prisma.userAuth.update({
       where: { id: userId },
-      data: { 
+      data: {
         refreshToken: null,
-        pushToken: null // Clear push token on logout for security
+        pushToken: null, // Clear push token on logout for security
       },
     });
 
