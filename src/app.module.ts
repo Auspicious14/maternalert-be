@@ -13,6 +13,7 @@ import { NotificationsModule } from "./notifications/notifications.module";
 import { EducationModule } from "./education/education.module";
 import { ClinicFinderModule } from "./clinic-finder/clinic-finder.module";
 import { AppController } from "./app.controller";
+import { HealthController } from "./health.controller";
 
 @Module({
   imports: [
@@ -38,6 +39,12 @@ import { AppController } from "./app.controller";
     EducationModule,
     ClinicFinderModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, HealthController],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

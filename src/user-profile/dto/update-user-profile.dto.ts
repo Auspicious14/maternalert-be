@@ -84,4 +84,11 @@ export class UpdateUserProfileDto {
   @IsOptional()
   @IsBoolean()
   notifyReminders?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, {
+    message: "Reminder time must be in HH:mm format (24h clock)",
+  })
+  reminderTime?: string;
 }

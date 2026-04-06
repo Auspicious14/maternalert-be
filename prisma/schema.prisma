@@ -152,6 +152,7 @@ model UserProfile {
   notifyBpAlert      Boolean @default(true)
   notifySymptomAlert Boolean @default(true)
   notifyReminders    Boolean @default(true)
+  reminderTime       String? @default("09:00") // 24h format (HH:mm)
   
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt

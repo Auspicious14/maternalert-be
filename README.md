@@ -96,6 +96,13 @@ npm test:watch
 npm test:cov
 ```
 
+## Deployment
+
+For persistent background tasks and cron jobs, the backend is optimized for deployment on **Hugging Face Spaces** using Docker.
+
+- [Deployment Guide](./DEPLOYMENT.md)
+- [Health Check API](http://localhost:3000/api/v1/health) (when running locally)
+
 ## Implementation Status
 
 This project follows a 12-step implementation process:

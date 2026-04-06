@@ -109,6 +109,72 @@ export class NotificationsService {
   }
 
   /**
+   * Daily BP Reminder Monitor
+   * Runs every minute to check which users should be reminded
+   */
+  @Cron(CronExpression.EVERY_MINUTE)
+  async checkDailyReminders() {
+    const now = new Date();
+    const currentHHmm = now.toLocaleTimeString("en-GB", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Find users who:
+    // 1. Have reminders enabled
+    // 2. Their reminderTime matches current time
+    // 3. Haven't logged BP today
+    const usersToRemind = await this.prisma.userAuth.findMany({
+      where: {
+        isActive: true,
+        profile: {
+          notifyReminders: true,
+          reminderTime: currentHHmm,
+        },
+        bloodPressureReadings: {
+          none: {
+            recordedAt: { gte: today },
+          },
+        },
+      },
+      select: { id: true, email: true },
+    });
+
+    if (usersToRemind.length > 0) {
+      this.logger.log(
+        `[REMINDER] Sending daily BP reminders to ${usersToRemind.length} users for time ${currentHHmm}`,
+      );
+    }
+
+    for (const user of usersToRemind) {
+      try {
+        const template = MONITORING_TEMPLATES.DAILY_REMINDER;
+        await this.prisma.notification.create({
+          data: {
+            userId: user.id,
+            type: NotificationType.REMINDER,
+            title: template.subject,
+            message: template.body,
+          },
+        });
+
+        await this.sendPushNotification(
+          user.id,
+          template.subject,
+          template.body,
+          { type: "DAILY_REMINDER" }
+        );
+      } catch (error) {
+        this.logger.error(`Failed to send daily reminder to user ${user.id}:`, error);
+      }
+    }
+  }
+
+  /**
    * Inactivity Monitor - Checks for users who haven't logged BP in 5 days
    * Runs daily at midnight
    */
@@ -132,40 +198,44 @@ export class NotificationsService {
     });
 
     for (const user of users) {
-      const template = MONITORING_TEMPLATES.INACTIVITY_REMINDER;
-      await this.prisma.notification.create({
-        data: {
-          userId: user.id,
-          type: NotificationType.REMINDER,
-          title: template.subject,
-          message: template.body,
-        },
-      });
+      try {
+        const template = MONITORING_TEMPLATES.INACTIVITY_REMINDER;
+        await this.prisma.notification.create({
+          data: {
+            userId: user.id,
+            type: NotificationType.REMINDER,
+            title: template.subject,
+            message: template.body,
+          },
+        });
 
-      // Send Push
-      await this.sendPushNotification(
-        user.id,
-        template.subject,
-        template.body,
-        { type: "INACTIVITY_REMINDER" }
-      );
-
-      // Send Email
-      if (user.email) {
-        const html = generateEmailHtml(
+        // Send Push
+        await this.sendPushNotification(
+          user.id,
           template.subject,
           template.body,
-          "Log BP Reading",
-          `${this.configService.get("FRONTEND_URL")}/bp-entry`,
-          "#2DE474"
+          { type: "INACTIVITY_REMINDER" }
         );
 
-        await this.emailService.sendEmail(
-          user.email,
-          template.subject,
-          template.body,
-          html
-        );
+        // Send Email
+        if (user.email) {
+          const html = generateEmailHtml(
+            template.subject,
+            template.body,
+            "Log BP Reading",
+            `${this.configService.get("FRONTEND_URL")}/bp-entry`,
+            "#2DE474"
+          );
+
+          await this.emailService.sendEmail(
+            user.email,
+            template.subject,
+            template.body,
+            html
+          );
+        }
+      } catch (error) {
+        this.logger.error(`Failed to process inactivity reminder for user ${user.id}:`, error);
       }
     }
     this.logger.log(`Inactivity check finished. ${users.length} users notified.`);
@@ -204,40 +274,44 @@ export class NotificationsService {
     });
 
     for (const user of users) {
-      const template = MONITORING_TEMPLATES.FOLLOW_UP_REMINDER;
-      await this.prisma.notification.create({
-        data: {
-          userId: user.id,
-          type: NotificationType.REMINDER,
-          title: template.subject,
-          message: template.body,
-        },
-      });
+      try {
+        const template = MONITORING_TEMPLATES.FOLLOW_UP_REMINDER;
+        await this.prisma.notification.create({
+          data: {
+            userId: user.id,
+            type: NotificationType.REMINDER,
+            title: template.subject,
+            message: template.body,
+          },
+        });
 
-      // Send Push
-      await this.sendPushNotification(
-        user.id,
-        template.subject,
-        template.body,
-        { type: "FOLLOW_UP" }
-      );
-
-      // Send Email
-      if (user.email) {
-        const html = generateEmailHtml(
+        // Send Push
+        await this.sendPushNotification(
+          user.id,
           template.subject,
           template.body,
-          "Recheck BP Now",
-          `${this.configService.get("FRONTEND_URL")}/bp-entry`,
-          "#FF9B3E"
+          { type: "FOLLOW_UP" }
         );
 
-        await this.emailService.sendEmail(
-          user.email,
-          template.subject,
-          template.body,
-          html
-        );
+        // Send Email
+        if (user.email) {
+          const html = generateEmailHtml(
+            template.subject,
+            template.body,
+            "Recheck BP Now",
+            `${this.configService.get("FRONTEND_URL")}/bp-entry`,
+            "#FF9B3E"
+          );
+
+          await this.emailService.sendEmail(
+            user.email,
+            template.subject,
+            template.body,
+            html
+          );
+        }
+      } catch (error) {
+        this.logger.error(`Failed to process follow-up reminder for user ${user.id}:`, error);
       }
     }
   }
@@ -258,39 +332,43 @@ export class NotificationsService {
     });
 
     for (const user of users) {
-      const readings = await this.prisma.bloodPressureReading.findMany({
-        where: {
-          userId: user.id,
-          recordedAt: { gte: sevenDaysAgo },
-        },
-        orderBy: { recordedAt: "asc" },
-      });
+      try {
+        const readings = await this.prisma.bloodPressureReading.findMany({
+          where: {
+            userId: user.id,
+            recordedAt: { gte: sevenDaysAgo },
+          },
+          orderBy: { recordedAt: "asc" },
+        });
 
-      if (readings.length < 3) continue;
+        if (readings.length < 3) continue;
 
-      // 1. Creeping Rise Detection (Consistent rise over 3+ readings)
-      let riseCount = 0;
-      for (let i = 1; i < readings.length; i++) {
-        if (readings[i].systolic > readings[i-1].systolic) riseCount++;
-        else riseCount = 0;
-      }
-      if (riseCount >= 3) {
-        await this.sendTrendAlert(user.id, TREND_ALERT_TEMPLATES.CREEPING_RISE, "CREEPING_RISE", user.email);
-        continue; // Don't spam multiple trend alerts
-      }
+        // 1. Creeping Rise Detection (Consistent rise over 3+ readings)
+        let riseCount = 0;
+        for (let i = 1; i < readings.length; i++) {
+          if (readings[i].systolic > readings[i-1].systolic) riseCount++;
+          else riseCount = 0;
+        }
+        if (riseCount >= 3) {
+          await this.sendTrendAlert(user.id, TREND_ALERT_TEMPLATES.CREEPING_RISE, "CREEPING_RISE", user.email);
+          continue; // Don't spam multiple trend alerts
+        }
 
-      // 2. Repeated High Readings (3+ elevated readings in a week)
-      const highReadings = readings.filter(r => r.systolic >= 135 || r.diastolic >= 85);
-      if (highReadings.length >= 3) {
-        await this.sendTrendAlert(user.id, TREND_ALERT_TEMPLATES.REPEATED_HIGH, "REPEATED_HIGH", user.email);
-        continue;
-      }
+        // 2. Repeated High Readings (3+ elevated readings in a week)
+        const highReadings = readings.filter(r => r.systolic >= 135 || r.diastolic >= 85);
+        if (highReadings.length >= 3) {
+          await this.sendTrendAlert(user.id, TREND_ALERT_TEMPLATES.REPEATED_HIGH, "REPEATED_HIGH", user.email);
+          continue;
+        }
 
-      // 3. Sudden Spike Detection (Latest reading is 20% > personal average)
-      const avgSystolic = readings.slice(0, -1).reduce((acc, curr) => acc + curr.systolic, 0) / (readings.length - 1);
-      const latest = readings[readings.length - 1];
-      if (latest.systolic > avgSystolic * 1.2) {
-        await this.sendTrendAlert(user.id, TREND_ALERT_TEMPLATES.SUDDEN_SPIKE, "SUDDEN_SPIKE", user.email);
+        // 3. Sudden Spike Detection (Latest reading is 20% > personal average)
+        const avgSystolic = readings.slice(0, -1).reduce((acc, curr) => acc + curr.systolic, 0) / (readings.length - 1);
+        const latest = readings[readings.length - 1];
+        if (latest.systolic > avgSystolic * 1.2) {
+          await this.sendTrendAlert(user.id, TREND_ALERT_TEMPLATES.SUDDEN_SPIKE, "SUDDEN_SPIKE", user.email);
+        }
+      } catch (error) {
+        this.logger.error(`Failed to analyze trends for user ${user.id}:`, error);
       }
     }
   }
