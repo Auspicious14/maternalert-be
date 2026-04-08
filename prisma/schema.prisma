@@ -67,6 +67,12 @@ model UserAuth {
   // Relation to Notifications
   notifications Notification[]
 
+  // Relation to MonitoringStateRecord
+  monitoringStateRecord MonitoringStateRecord?
+
+  // Relation to FollowUpTasks
+  followUpTasks FollowUpTask[]
+
   @@index([email])
   @@index([phone])
   @@map("user_auth")
@@ -279,4 +285,76 @@ model Notification {
   @@index([userId])
   @@index([createdAt])
   @@map("notification")
+}
+
+/**
+ * MonitoringState Enum
+ *
+ * Defines the possible states of the monitoring system for a user.
+ */
+enum MonitoringState {
+  NORMAL
+  MONITOR
+  URGENT
+  EMERGENCY
+}
+
+/**
+ * MonitoringStateRecord Entity
+ *
+ * Stores the current monitoring state for each user.
+ */
+model MonitoringStateRecord {
+  id            String        @id @default(uuid())
+  userId        String        @unique
+  currentState  MonitoringState
+  lastUpdatedAt DateTime      @default(now())
+  reason        String?
+
+  userAuth      UserAuth      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("monitoring_state_record")
+}
+
+/**
+ * FollowUpTaskType Enum
+ *
+ * Defines the types of follow-up tasks.
+ */
+enum FollowUpTaskType {
+  RECHECK
+  SEEK_CARE
+}
+
+/**
+ * FollowUpTaskStatus Enum
+ *
+ * Defines the status of follow-up tasks.
+ */
+enum FollowUpTaskStatus {
+  PENDING
+  COMPLETED
+  MISSED
+}
+
+/**
+ * FollowUpTask Entity
+ *
+ * Stores details about each follow-up task.
+ */
+model FollowUpTask {
+  id              String             @id @default(uuid())
+  userId          String
+  type            FollowUpTaskType
+  dueAt           DateTime
+  status          FollowUpTaskStatus @default(PENDING)
+  relatedReadingId String? // Optional: Link to a specific BP reading that triggered the task
+
+  userAuth        UserAuth           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([dueAt])
+  @@index([status])
+  @@map("follow_up_task")
 }

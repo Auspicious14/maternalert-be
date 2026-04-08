@@ -19,15 +19,17 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Create a non-root user for security (Hugging Face requirement)
-RUN adduser -D -u 1000 appuser
-USER appuser
+# The official node:alpine image already has a 'node' user with UID 1000
+# which is what Hugging Face requires. We'll use that instead of creating a new one.
+USER node
 
 # Copy built assets and production dependencies
-COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/prisma ./prisma
+# Ensure we set ownership to the node user
+COPY --from=builder --chown=node:node /app/package*.json ./
+COPY --from=builder --chown=node:node /app/node_modules ./node_modules
+COPY --from=builder --chown=node:node /app/dist ./dist
+COPY --from=builder --chown=node:node /app/prisma ./prisma
+COPY --from=builder --chown=node:node /app/prisma.config.ts ./prisma.config.ts
 
 # Set production environment
 ENV NODE_ENV=production

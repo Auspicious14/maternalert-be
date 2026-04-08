@@ -12,6 +12,7 @@ import { CarePriorityModule } from "./care-priority/care-priority.module";
 import { NotificationsModule } from "./notifications/notifications.module";
 import { EducationModule } from "./education/education.module";
 import { ClinicFinderModule } from "./clinic-finder/clinic-finder.module";
+import { MonitoringEngineModule } from "./monitoring-engine/monitoring-engine.module";
 import { AppController } from "./app.controller";
 import { HealthController } from "./health.controller";
 
@@ -26,6 +27,14 @@ import { HealthController } from "./health.controller";
     // Scheduling
     ScheduleModule.forRoot(),
 
+    // Throttling
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000,
+        limit: 20,
+      },
+    ]),
+
     // Database (Prisma) - Global module
     DatabaseModule,
 
@@ -38,6 +47,7 @@ import { HealthController } from "./health.controller";
     NotificationsModule,
     EducationModule,
     ClinicFinderModule,
+    MonitoringEngineModule,
   ],
   controllers: [AppController, HealthController],
   providers: [

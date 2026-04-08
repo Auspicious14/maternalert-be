@@ -17,15 +17,14 @@ import {
 import { BloodPressureService } from "./blood-pressure.service";
 import { CreateBloodPressureDto } from "./dto/create-blood-pressure.dto";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
-import { HealthAssessmentService } from "../care-priority/health-assessment.service";
+import { MonitoringEngineService } from "../monitoring-engine/monitoring-engine.service";
 
 @Controller("blood-pressure")
 @UseGuards(JwtAuthGuard)
 export class BloodPressureController {
   constructor(
     private readonly bloodPressureService: BloodPressureService,
-    @Inject(forwardRef(() => HealthAssessmentService))
-    private readonly healthAssessmentService: HealthAssessmentService
+    private readonly monitoringEngineService: MonitoringEngineService,
   ) {}
 
   @Post()
@@ -40,10 +39,15 @@ export class BloodPressureController {
       createBloodPressureDto
     );
 
-    // Trigger health assessment and notifications (don't await to avoid blocking response)
-    this.healthAssessmentService.assessAndNotify(userId);
+    const monitoringResult = await this.monitoringEngineService.evaluate(userId);
 
-    return reading;
+    return {
+      reading,
+      monitoringState: monitoringResult.state,
+      message: monitoringResult.message,
+      nextAction: monitoringResult.nextAction,
+      followUp: monitoringResult.followUp,
+    };
   }
 
   /**

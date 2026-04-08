@@ -64,7 +64,7 @@ export class NotificationsService {
   /**
    * Internal helper to send push notifications
    */
-  private async sendPushNotification(
+  public async sendPushNotification(
     userId: string,
     title: string,
     body: string,
