@@ -54,7 +54,10 @@ export class AuthService {
 
     // Find user — build conditions dynamically to avoid empty {} matching all rows
     const conditions: any[] = [];
-    if (email) conditions.push({ email });
+    if (email)
+      conditions.push({
+        email: { equals: email.toLowerCase(), mode: "insensitive" },
+      });
     if (phone) conditions.push({ phone });
 
     const user = await this.prisma.userAuth.findFirst({
@@ -148,7 +151,11 @@ export class AuthService {
 
     // Check for existing user — build conditions dynamically
     const conditions: any[] = [];
-    if (email) conditions.push({ email });
+    const normalizedEmail = email?.toLowerCase();
+    if (normalizedEmail)
+      conditions.push({
+        email: { equals: normalizedEmail, mode: "insensitive" },
+      });
     if (phone) conditions.push({ phone });
 
     const existingUser = await this.prisma.userAuth.findFirst({
@@ -168,7 +175,7 @@ export class AuthService {
     try {
       const user = await this.prisma.userAuth.create({
         data: {
-          email,
+          email: normalizedEmail,
           phone,
           passwordHash,
         },
@@ -202,7 +209,10 @@ export class AuthService {
 
     // Find user — build conditions dynamically
     const loginConditions: any[] = [];
-    if (email) loginConditions.push({ email });
+    if (email)
+      loginConditions.push({
+        email: { equals: email.toLowerCase(), mode: "insensitive" },
+      });
     if (phone) loginConditions.push({ phone });
 
     const user = await this.prisma.userAuth.findFirst({
@@ -308,15 +318,22 @@ export class AuthService {
     });
 
     // Store refresh token in database
-    await this.prisma.userAuth.update({
+    const user = await this.prisma.userAuth.update({
       where: { id: userId },
       data: { refreshToken },
+      select: {
+        id: true,
+        email: true,
+        phone: true,
+        isActive: true,
+      },
     });
 
     return {
       accessToken,
       refreshToken,
       userId,
+      user,
     };
   }
 

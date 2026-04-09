@@ -1,15 +1,15 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
-import { PrismaService } from '../database/prisma.service';
-import { MonitoringEngineService } from './monitoring-engine.service';
+import { Injectable, Logger } from "@nestjs/common";
+import { Cron, CronExpression } from "@nestjs/schedule";
+import { PrismaService } from "../database/prisma.service";
+import { MonitoringEngineService } from "./monitoring-engine.service";
 import {
   FollowUpTaskStatus,
   FollowUpTaskType,
   MonitoringState,
-} from '@prisma/client';
-import { NotificationsService } from '../notifications/notifications.service';
-import { UserProfileService } from '../user-profile/user-profile.service';
-import { AppNotificationType } from '../common/enums/app-notification-type.enum';
+} from "@prisma/client";
+import { NotificationsService } from "../notifications/notifications.service";
+import { UserProfileService } from "../user-profile/user-profile.service";
+import { AppNotificationType } from "../common/enums/app-notification-type.enum";
 
 @Injectable()
 export class MonitoringSchedulerService {
@@ -24,7 +24,7 @@ export class MonitoringSchedulerService {
 
   @Cron(CronExpression.EVERY_HOUR)
   async handleOverdueFollowUps() {
-    this.logger.log('Checking for overdue follow-up tasks...');
+    this.logger.log("Checking for overdue follow-up tasks...");
     const now = new Date();
 
     const overdueTasks = await this.prisma.followUpTask.findMany({
@@ -52,7 +52,7 @@ export class MonitoringSchedulerService {
       // Trigger notification
       await this.notificationsService.sendPushNotification(
         task.userId,
-        'Follow-up Missed',
+        "Follow-up Missed",
         `Your ${task.type} follow-up task was missed. Current state: ${result.state}.`,
         { type: AppNotificationType.FOLLOW_UP_MISSED },
       );
@@ -62,9 +62,9 @@ export class MonitoringSchedulerService {
     );
   }
 
-  @Cron('0 9 * * *') // Every day at 9 AM
+  @Cron("0 9 * * *") // Every day at 9 AM
   async handleInactivity() {
-    this.logger.log('Checking for user inactivity...');
+    this.logger.log("Checking for user inactivity...");
     const now = new Date();
     const fiveDaysAgo = new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000);
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -73,7 +73,7 @@ export class MonitoringSchedulerService {
       select: {
         id: true,
         bloodPressureReadings: {
-          orderBy: { recordedAt: 'desc' },
+          orderBy: { recordedAt: "desc" },
           take: 1,
         },
       },
@@ -83,16 +83,25 @@ export class MonitoringSchedulerService {
       const lastBpReading = user.bloodPressureReadings[0];
       if (!lastBpReading) {
         // No BP ever logged, send initial reminder after 5 days of account creation
-        const userProfile = await this.userProfileService.findByUserId(user.id);
-        if (userProfile && userProfile.createdAt < fiveDaysAgo) {
-          await this.notificationsService.sendPushNotification(
+        try {
+          const userProfile = await this.userProfileService.findByUserId(
             user.id,
-            'BP Log Reminder',
-            "You haven't logged your blood pressure yet. Please log your first reading.",
-            { type: AppNotificationType.INACTIVITY_REMINDER },
           );
-          this.logger.log(
-            `Inactivity reminder sent to user ${user.id} (no BP ever logged).`,
+          if (userProfile && userProfile.createdAt < fiveDaysAgo) {
+            await this.notificationsService.sendPushNotification(
+              user.id,
+              "BP Log Reminder",
+              "You haven't logged your blood pressure yet. Please log your first reading.",
+              { type: AppNotificationType.INACTIVITY_REMINDER },
+            );
+            this.logger.log(
+              `Inactivity reminder sent to user ${user.id} (no BP ever logged).`,
+            );
+          }
+        } catch (error) {
+          // If profile not found, skip for now. Profiling is needed for notifications.
+          this.logger.debug(
+            `Skipping inactivity check for user ${user.id}: No profile found.`,
           );
         }
         continue;
@@ -102,7 +111,7 @@ export class MonitoringSchedulerService {
         // No BP logged in >7 days -> escalate messaging urgency
         await this.notificationsService.sendPushNotification(
           user.id,
-          'Urgent BP Reminder',
+          "Urgent BP Reminder",
           "It's been over 7 days since your last blood pressure reading. Please log it now.",
           { type: AppNotificationType.URGENT_INACTIVITY_REMINDER },
         );
@@ -113,7 +122,7 @@ export class MonitoringSchedulerService {
         // No BP logged in >5 days -> send reminder
         await this.notificationsService.sendPushNotification(
           user.id,
-          'BP Log Reminder',
+          "BP Log Reminder",
           "It's been over 5 days since your last blood pressure reading. Please log it soon.",
           { type: AppNotificationType.INACTIVITY_REMINDER },
         );
@@ -122,6 +131,6 @@ export class MonitoringSchedulerService {
         );
       }
     }
-    this.logger.log('Finished checking for user inactivity.');
+    this.logger.log("Finished checking for user inactivity.");
   }
 }
