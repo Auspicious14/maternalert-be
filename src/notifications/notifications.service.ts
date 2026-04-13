@@ -36,7 +36,7 @@ export class NotificationsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
-    private readonly configService: ConfigService
+    private readonly configService: ConfigService,
   ) {}
 
   /**
@@ -68,7 +68,7 @@ export class NotificationsService {
     userId: string,
     title: string,
     body: string,
-    data?: any
+    data?: any,
   ): Promise<void> {
     const user = await this.prisma.userAuth.findUnique({
       where: { id: userId },
@@ -76,13 +76,17 @@ export class NotificationsService {
     });
 
     if (!user?.pushToken) {
-      this.logger.debug(`No push token found for user ${userId}, skipping push.`);
+      this.logger.debug(
+        `No push token found for user ${userId}, skipping push.`,
+      );
       return;
     }
 
     const { Expo } = await import("expo-server-sdk");
     if (!Expo.isExpoPushToken(user.pushToken)) {
-      this.logger.error(`Push token ${user.pushToken} is not a valid Expo push token`);
+      this.logger.error(
+        `Push token ${user.pushToken} is not a valid Expo push token`,
+      );
       return;
     }
 
@@ -100,11 +104,17 @@ export class NotificationsService {
       const expo = await this.getExpo();
       const chunks = expo.chunkPushNotifications(messages);
       for (const chunk of chunks) {
-        await expo.sendPushNotificationsAsync(chunk);
+        const tickets = await expo.sendPushNotificationsAsync(chunk);
+        this.logger.log(
+          `Push notification tickets for user ${userId}: ${JSON.stringify(tickets)}`,
+        );
       }
       this.logger.log(`Push notification sent to user ${userId}`);
     } catch (error) {
-      this.logger.error(`Error sending push notification to user ${userId}:`, error);
+      this.logger.error(
+        `Error sending push notification to user ${userId}:`,
+        error,
+      );
     }
   }
 
@@ -115,11 +125,9 @@ export class NotificationsService {
   @Cron(CronExpression.EVERY_MINUTE)
   async checkDailyReminders() {
     const now = new Date();
-    const currentHHmm = now.toLocaleTimeString("en-GB", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
+    const hours = now.getHours().toString().padStart(2, "0");
+    const minutes = now.getMinutes().toString().padStart(2, "0");
+    const currentHHmm = `${hours}:${minutes}`;
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -166,10 +174,13 @@ export class NotificationsService {
           user.id,
           template.subject,
           template.body,
-          { type: "DAILY_REMINDER" }
+          { type: "BP_REMINDER" },
         );
       } catch (error) {
-        this.logger.error(`Failed to send daily reminder to user ${user.id}:`, error);
+        this.logger.error(
+          `Failed to send daily reminder to user ${user.id}:`,
+          error,
+        );
       }
     }
   }
@@ -214,7 +225,7 @@ export class NotificationsService {
           user.id,
           template.subject,
           template.body,
-          { type: "INACTIVITY_REMINDER" }
+          { type: "INACTIVITY_REMINDER" },
         );
 
         // Send Email
@@ -224,21 +235,26 @@ export class NotificationsService {
             template.body,
             "Log BP Reading",
             `${this.configService.get("FRONTEND_URL")}/bp-entry`,
-            "#2DE474"
+            "#2DE474",
           );
 
           await this.emailService.sendEmail(
             user.email,
             template.subject,
             template.body,
-            html
+            html,
           );
         }
       } catch (error) {
-        this.logger.error(`Failed to process inactivity reminder for user ${user.id}:`, error);
+        this.logger.error(
+          `Failed to process inactivity reminder for user ${user.id}:`,
+          error,
+        );
       }
     }
-    this.logger.log(`Inactivity check finished. ${users.length} users notified.`);
+    this.logger.log(
+      `Inactivity check finished. ${users.length} users notified.`,
+    );
   }
 
   /**
@@ -260,10 +276,7 @@ export class NotificationsService {
         bloodPressureReadings: {
           some: {
             recordedAt: { gte: fiveHoursAgo, lte: fourHoursAgo },
-            OR: [
-              { systolic: { gte: 130 } },
-              { diastolic: { gte: 80 } },
-            ],
+            OR: [{ systolic: { gte: 130 } }, { diastolic: { gte: 80 } }],
           },
           none: {
             recordedAt: { gt: fourHoursAgo },
@@ -290,7 +303,7 @@ export class NotificationsService {
           user.id,
           template.subject,
           template.body,
-          { type: "FOLLOW_UP" }
+          { type: "FOLLOW_UP" },
         );
 
         // Send Email
@@ -300,18 +313,21 @@ export class NotificationsService {
             template.body,
             "Recheck BP Now",
             `${this.configService.get("FRONTEND_URL")}/bp-entry`,
-            "#FF9B3E"
+            "#FF9B3E",
           );
 
           await this.emailService.sendEmail(
             user.email,
             template.subject,
             template.body,
-            html
+            html,
           );
         }
       } catch (error) {
-        this.logger.error(`Failed to process follow-up reminder for user ${user.id}:`, error);
+        this.logger.error(
+          `Failed to process follow-up reminder for user ${user.id}:`,
+          error,
+        );
       }
     }
   }
@@ -346,34 +362,61 @@ export class NotificationsService {
         // 1. Creeping Rise Detection (Consistent rise over 3+ readings)
         let riseCount = 0;
         for (let i = 1; i < readings.length; i++) {
-          if (readings[i].systolic > readings[i-1].systolic) riseCount++;
+          if (readings[i].systolic > readings[i - 1].systolic) riseCount++;
           else riseCount = 0;
         }
         if (riseCount >= 3) {
-          await this.sendTrendAlert(user.id, TREND_ALERT_TEMPLATES.CREEPING_RISE, "CREEPING_RISE", user.email);
+          await this.sendTrendAlert(
+            user.id,
+            TREND_ALERT_TEMPLATES.CREEPING_RISE,
+            "CREEPING_RISE",
+            user.email,
+          );
           continue; // Don't spam multiple trend alerts
         }
 
         // 2. Repeated High Readings (3+ elevated readings in a week)
-        const highReadings = readings.filter(r => r.systolic >= 135 || r.diastolic >= 85);
+        const highReadings = readings.filter(
+          (r) => r.systolic >= 135 || r.diastolic >= 85,
+        );
         if (highReadings.length >= 3) {
-          await this.sendTrendAlert(user.id, TREND_ALERT_TEMPLATES.REPEATED_HIGH, "REPEATED_HIGH", user.email);
+          await this.sendTrendAlert(
+            user.id,
+            TREND_ALERT_TEMPLATES.REPEATED_HIGH,
+            "REPEATED_HIGH",
+            user.email,
+          );
           continue;
         }
 
         // 3. Sudden Spike Detection (Latest reading is 20% > personal average)
-        const avgSystolic = readings.slice(0, -1).reduce((acc, curr) => acc + curr.systolic, 0) / (readings.length - 1);
+        const avgSystolic =
+          readings.slice(0, -1).reduce((acc, curr) => acc + curr.systolic, 0) /
+          (readings.length - 1);
         const latest = readings[readings.length - 1];
         if (latest.systolic > avgSystolic * 1.2) {
-          await this.sendTrendAlert(user.id, TREND_ALERT_TEMPLATES.SUDDEN_SPIKE, "SUDDEN_SPIKE", user.email);
+          await this.sendTrendAlert(
+            user.id,
+            TREND_ALERT_TEMPLATES.SUDDEN_SPIKE,
+            "SUDDEN_SPIKE",
+            user.email,
+          );
         }
       } catch (error) {
-        this.logger.error(`Failed to analyze trends for user ${user.id}:`, error);
+        this.logger.error(
+          `Failed to analyze trends for user ${user.id}:`,
+          error,
+        );
       }
     }
   }
 
-  private async sendTrendAlert(userId: string, template: any, trendType: string, email?: string | null) {
+  private async sendTrendAlert(
+    userId: string,
+    template: any,
+    trendType: string,
+    email?: string | null,
+  ) {
     await this.prisma.notification.create({
       data: {
         userId,
@@ -383,12 +426,10 @@ export class NotificationsService {
       },
     });
 
-    await this.sendPushNotification(
-      userId,
-      template.subject,
-      template.body,
-      { type: "TREND_ALERT", trendType }
-    );
+    await this.sendPushNotification(userId, template.subject, template.body, {
+      type: "TREND_ALERT",
+      trendType,
+    });
 
     if (email) {
       const html = generateEmailHtml(
@@ -396,14 +437,14 @@ export class NotificationsService {
         template.body,
         "View Trends",
         `${this.configService.get("FRONTEND_URL")}/(tabs)/tracking`,
-        "#FF9B3E"
+        "#FF9B3E",
       );
 
       await this.emailService.sendEmail(
         email,
         template.subject,
         template.body,
-        html
+        html,
       );
     }
   }
@@ -413,14 +454,14 @@ export class NotificationsService {
    */
   async sendCarePriorityNotification(
     userId: string,
-    priority: CarePriority
+    priority: CarePriority,
   ): Promise<void> {
     const template = CARE_PRIORITY_TEMPLATES[priority];
     const email = await this.getUserEmail(userId);
 
     // Log notification
     this.logger.log(`[NOTIFICATION] User: ${userId}, Priority: ${priority}`);
-    
+
     // Persist to database
     await this.prisma.notification.create({
       data: {
@@ -438,24 +479,26 @@ export class NotificationsService {
         `${template.body}\n\n${template.callToAction}`,
         "View Details",
         `${this.configService.get("FRONTEND_URL")}/(tabs)/tracking`,
-        priority === CarePriority.EMERGENCY ? "#FF4B4B" : priority === CarePriority.URGENT_REVIEW ? "#FF9B3E" : "#2DE474"
+        priority === CarePriority.EMERGENCY
+          ? "#FF4B4B"
+          : priority === CarePriority.URGENT_REVIEW
+            ? "#FF9B3E"
+            : "#2DE474",
       );
 
       await this.emailService.sendEmail(
         email,
         template.subject,
         `${template.body}\n\n${template.callToAction}`,
-        html
+        html,
       );
     }
 
     // Send Push
-    await this.sendPushNotification(
-      userId,
-      template.subject,
-      template.body,
-      { type: "ESCALATION_ALERT", priority }
-    );
+    await this.sendPushNotification(userId, template.subject, template.body, {
+      type: "ESCALATION_ALERT",
+      priority,
+    });
 
     this.logger.log(`✅ Notification handled for user ${userId}`);
   }
@@ -466,13 +509,13 @@ export class NotificationsService {
   async sendSevereBPAlert(
     userId: string,
     systolic: number,
-    diastolic: number
+    diastolic: number,
   ): Promise<void> {
     const template = BP_ALERT_TEMPLATES.SEVERE_HYPERTENSION;
     const email = await this.getUserEmail(userId);
 
     this.logger.warn(
-      `[ALERT] Severe BP for user ${userId}: ${systolic}/${diastolic}`
+      `[ALERT] Severe BP for user ${userId}: ${systolic}/${diastolic}`,
     );
 
     const message = `${template.body}\nReading: ${systolic}/${diastolic}\n\n${template.callToAction}`;
@@ -493,24 +536,18 @@ export class NotificationsService {
         message,
         "Log Now",
         `${this.configService.get("FRONTEND_URL")}/bp-entry`,
-        "#FF4B4B"
+        "#FF4B4B",
       );
 
-      await this.emailService.sendEmail(
-        email,
-        template.subject,
-        message,
-        html
-      );
+      await this.emailService.sendEmail(email, template.subject, message, html);
     }
 
     // Send Push
-    await this.sendPushNotification(
-      userId,
-      template.subject,
-      template.body,
-      { type: "TREND_ALERT", systolic, diastolic }
-    );
+    await this.sendPushNotification(userId, template.subject, template.body, {
+      type: "TREND_ALERT",
+      systolic,
+      diastolic,
+    });
 
     this.logger.log(`✅ Severe BP alert handled for user ${userId}`);
   }
@@ -521,13 +558,13 @@ export class NotificationsService {
   async sendElevatedBPNotification(
     userId: string,
     systolic: number,
-    diastolic: number
+    diastolic: number,
   ): Promise<void> {
     const template = BP_ALERT_TEMPLATES.ELEVATED_BP;
     const email = await this.getUserEmail(userId);
 
     this.logger.log(
-      `[NOTIFICATION] Elevated BP for user ${userId}: ${systolic}/${diastolic}`
+      `[NOTIFICATION] Elevated BP for user ${userId}: ${systolic}/${diastolic}`,
     );
 
     const message = `${template.body}\nReading: ${systolic}/${diastolic}\n\n${template.callToAction}`;
@@ -548,24 +585,18 @@ export class NotificationsService {
         message,
         "Log Now",
         `${this.configService.get("FRONTEND_URL")}/bp-entry`,
-        "#FF9B3E"
+        "#FF9B3E",
       );
 
-      await this.emailService.sendEmail(
-        email,
-        template.subject,
-        message,
-        html
-      );
+      await this.emailService.sendEmail(email, template.subject, message, html);
     }
 
     // Send Push
-    await this.sendPushNotification(
-      userId,
-      template.subject,
-      template.body,
-      { type: "TREND_ALERT", systolic, diastolic }
-    );
+    await this.sendPushNotification(userId, template.subject, template.body, {
+      type: "TREND_ALERT",
+      systolic,
+      diastolic,
+    });
 
     this.logger.log(`✅ Elevated BP notification handled for user ${userId}`);
   }
@@ -575,13 +606,13 @@ export class NotificationsService {
    */
   async sendDangerousSymptomAlert(
     userId: string,
-    symptoms: string[]
+    symptoms: string[],
   ): Promise<void> {
     const template = SYMPTOM_ALERT_TEMPLATES.DANGEROUS_COMBINATION;
     const email = await this.getUserEmail(userId);
 
     this.logger.warn(
-      `[ALERT] Dangerous symptoms for user ${userId}: ${symptoms.join(", ")}`
+      `[ALERT] Dangerous symptoms for user ${userId}: ${symptoms.join(", ")}`,
     );
 
     const message = `${template.body}\nSymptoms reported: ${symptoms.join(", ")}\n\n${template.callToAction}`;
@@ -602,24 +633,17 @@ export class NotificationsService {
         message,
         "Open App",
         `${this.configService.get("FRONTEND_URL")}/(tabs)/tracking`,
-        "#FF4B4B"
+        "#FF4B4B",
       );
 
-      await this.emailService.sendEmail(
-        email,
-        template.subject,
-        message,
-        html
-      );
+      await this.emailService.sendEmail(email, template.subject, message, html);
     }
 
     // Send Push
-    await this.sendPushNotification(
-      userId,
-      template.subject,
-      template.body,
-      { type: "TREND_ALERT", symptoms }
-    );
+    await this.sendPushNotification(userId, template.subject, template.body, {
+      type: "TREND_ALERT",
+      symptoms,
+    });
 
     this.logger.log(`✅ Dangerous symptom alert handled for user ${userId}`);
   }
@@ -629,13 +653,13 @@ export class NotificationsService {
    */
   async sendWarningSymptomNotification(
     userId: string,
-    symptom: string
+    symptom: string,
   ): Promise<void> {
     const template = SYMPTOM_ALERT_TEMPLATES.SINGLE_WARNING_SYMPTOM;
     const email = await this.getUserEmail(userId);
 
     this.logger.log(
-      `[NOTIFICATION] Warning symptom for user ${userId}: ${symptom}`
+      `[NOTIFICATION] Warning symptom for user ${userId}: ${symptom}`,
     );
 
     const message = `${template.body}\nSymptom reported: ${symptom}\n\n${template.callToAction}`;
@@ -656,26 +680,21 @@ export class NotificationsService {
         message,
         "Open App",
         `${this.configService.get("FRONTEND_URL")}/(tabs)/tracking`,
-        "#FF9B3E"
+        "#FF9B3E",
       );
 
-      await this.emailService.sendEmail(
-        email,
-        template.subject,
-        message,
-        html
-      );
+      await this.emailService.sendEmail(email, template.subject, message, html);
     }
 
     // Send Push
-    await this.sendPushNotification(
-      userId,
-      template.subject,
-      template.body,
-      { type: "TREND_ALERT", symptom }
-    );
+    await this.sendPushNotification(userId, template.subject, template.body, {
+      type: "TREND_ALERT",
+      symptom,
+    });
 
-    this.logger.log(`✅ Warning symptom notification handled for user ${userId}`);
+    this.logger.log(
+      `✅ Warning symptom notification handled for user ${userId}`,
+    );
   }
 
   /**
@@ -683,12 +702,14 @@ export class NotificationsService {
    */
   async sendResetPasswordNotification(
     userId: string,
-    token: string
+    token: string,
   ): Promise<void> {
     const template = AUTH_TEMPLATES.RESET_PASSWORD;
     const email = await this.getUserEmail(userId);
 
-    this.logger.log(`[AUTH] Reset password request for user ${userId}. Email: ${email || 'N/A'}`);
+    this.logger.log(
+      `[AUTH] Reset password request for user ${userId}. Email: ${email || "N/A"}`,
+    );
 
     const resetLink = `${this.configService.get("FRONTEND_URL")}/reset-password?token=${token}`;
     const message = `${template.body}\n\nReset Link: ${resetLink}`;
@@ -710,15 +731,10 @@ export class NotificationsService {
         template.body,
         "Reset Password",
         resetLink,
-        "#1E6BFF" // Use setup blue for auth actions
+        "#1E6BFF", // Use setup blue for auth actions
       );
 
-      await this.emailService.sendEmail(
-        email,
-        template.subject,
-        message,
-        html
-      );
+      await this.emailService.sendEmail(email, template.subject, message, html);
     }
 
     // Send Push
@@ -726,10 +742,12 @@ export class NotificationsService {
       userId,
       template.subject,
       template.body,
-      { type: "SESSION_EXPIRY" } // Using session expiry as a proxy for generic auth actions
+      { type: "SESSION_EXPIRY" }, // Using session expiry as a proxy for generic auth actions
     );
 
-    this.logger.log(`✅ Reset password notification handled for user ${userId}`);
+    this.logger.log(
+      `✅ Reset password notification handled for user ${userId}`,
+    );
   }
 
   /**

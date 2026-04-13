@@ -18,6 +18,7 @@ import { BloodPressureService } from "./blood-pressure.service";
 import { CreateBloodPressureDto } from "./dto/create-blood-pressure.dto";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { MonitoringEngineService } from "../monitoring-engine/monitoring-engine.service";
+import { HealthAssessmentService } from "../care-priority/health-assessment.service";
 
 @Controller("blood-pressure")
 @UseGuards(JwtAuthGuard)
@@ -25,21 +26,27 @@ export class BloodPressureController {
   constructor(
     private readonly bloodPressureService: BloodPressureService,
     private readonly monitoringEngineService: MonitoringEngineService,
+    @Inject(forwardRef(() => HealthAssessmentService))
+    private readonly healthAssessmentService: HealthAssessmentService,
   ) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
   async create(
     @Request() req: any,
-    @Body() createBloodPressureDto: CreateBloodPressureDto
+    @Body() createBloodPressureDto: CreateBloodPressureDto,
   ) {
     const userId = req.user.id;
     const reading = await this.bloodPressureService.create(
       userId,
-      createBloodPressureDto
+      createBloodPressureDto,
     );
 
-    const monitoringResult = await this.monitoringEngineService.evaluate(userId);
+    const monitoringResult =
+      await this.monitoringEngineService.evaluate(userId);
+
+    // Trigger health assessment and notifications (immediate Email/Push if needed)
+    this.healthAssessmentService.assessAndNotify(userId);
 
     return {
       reading,
@@ -61,7 +68,7 @@ export class BloodPressureController {
   @HttpCode(HttpStatus.OK)
   async getReadings(
     @Request() req: any,
-    @Query("limit", new ParseIntPipe({ optional: true })) limit?: number
+    @Query("limit", new ParseIntPipe({ optional: true })) limit?: number,
   ) {
     const userId = req.user.id;
     return this.bloodPressureService.findByUserId(userId, limit);
