@@ -94,12 +94,12 @@ export const SYMPTOM_ALERT_TEMPLATES = {
  */
 export const AUTH_TEMPLATES = {
   RESET_PASSWORD: {
-    subject: "Reset Your Password",
-    body: "You requested a password reset. Use the link below to set a new password. This link will expire in 1 hour.",
-    callToAction: "Reset your password.",
+    subject: 'Reset Your MaternAlert Password',
+    title: 'Reset Your Password',          
+    body: 'You requested a password reset for your MaternAlert account.\n\nTap the button below to create a new password. This link expires in 1 hour.\n\nIf you did not request this, you can safely ignore this email.',
+    callToAction: 'Reset Password',       
   },
 };
-
 /**
  * Monitoring and Reminder Templates
  */

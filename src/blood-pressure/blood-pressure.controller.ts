@@ -25,6 +25,7 @@ import { HealthAssessmentService } from "../care-priority/health-assessment.serv
 export class BloodPressureController {
   constructor(
     private readonly bloodPressureService: BloodPressureService,
+    @Inject(forwardRef(() => MonitoringEngineService))
     private readonly monitoringEngineService: MonitoringEngineService,
     @Inject(forwardRef(() => HealthAssessmentService))
     private readonly healthAssessmentService: HealthAssessmentService,

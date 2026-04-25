@@ -8,7 +8,7 @@ async function bootstrap() {
   setupGlobalMiddleware(app);
 
   const port = process.env.PORT || 3000;
-  await app.listen(port, '0.0.0.0');
+  await app.listen(port, "0.0.0.0");
 
   console.log(`\n🏥 Maternal Health Support Backend`);
   console.log(`⚠️  CARE-SUPPORT TOOL - NOT A DIAGNOSTIC SYSTEM`);

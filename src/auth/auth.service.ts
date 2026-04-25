@@ -16,6 +16,7 @@ import { AuthResponseDto } from "./dto/auth-response.dto";
 import { ForgotPasswordDto } from "./dto/forgot-password.dto";
 import { ResetPasswordDto } from "./dto/reset-password.dto";
 import { NotificationsService } from "../notifications/notifications.service";
+import { EmailService } from "../email/email.service";
 
 /**
  * Authentication Service
@@ -39,6 +40,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly notificationsService: NotificationsService,
+    private readonly emailService: EmailService,
   ) {}
 
   /**
@@ -181,6 +183,16 @@ export class AuthService {
         },
       });
       this.logger.log(`New user registered: ${user.id}`);
+
+      // TRIGGER 2 — Send welcome email asynchronously
+      if (user.email) {
+        this.emailService
+          .sendWelcomeEmail(user.email, "Mama")
+          .catch((err) =>
+            this.logger.error(`Failed to send welcome email to ${user.email}`, err),
+          );
+      }
+
       return this.generateTokens(user.id);
     } catch (error: any) {
       this.logger.error(

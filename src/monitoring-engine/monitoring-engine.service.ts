@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { BloodPressureService } from '../blood-pressure/blood-pressure.service';
 import { SymptomsService } from '../symptoms/symptoms.service';
@@ -16,6 +16,7 @@ export class MonitoringEngineService {
 
   constructor(
     private readonly prisma: PrismaService,
+    @Inject(forwardRef(() => BloodPressureService))
     private readonly bloodPressureService: BloodPressureService,
     private readonly symptomsService: SymptomsService,
     private readonly userProfileService: UserProfileService,

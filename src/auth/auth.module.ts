@@ -6,6 +6,7 @@ import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
 import { JwtStrategy } from "./strategies/jwt.strategy";
 import { NotificationsModule } from "../notifications/notifications.module";
+import { EmailModule } from "../email/email.module";
 
 /**
  * Authentication Module
@@ -27,6 +28,7 @@ import { NotificationsModule } from "../notifications/notifications.module";
 @Module({
   imports: [
     NotificationsModule,
+    EmailModule,
     PassportModule.register({ defaultStrategy: "jwt" }),
     JwtModule.registerAsync({
       imports: [ConfigModule],

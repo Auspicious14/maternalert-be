@@ -1,6 +1,7 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { PrismaService } from "../database/prisma.service";
 import { CreateBloodPressureDto } from "./dto/create-blood-pressure.dto";
+import { EmailService } from "../email/email.service";
 
 /**
  * Blood Pressure Service
@@ -22,7 +23,10 @@ import { CreateBloodPressureDto } from "./dto/create-blood-pressure.dto";
 export class BloodPressureService {
   private readonly logger = new Logger(BloodPressureService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly emailService: EmailService,
+  ) {}
 
   /**
    * Create a new blood pressure reading
@@ -48,7 +52,54 @@ export class BloodPressureService {
       `BP reading created for user: ${userId} (${systolic}/${diastolic})`
     );
 
+    // TRIGGER 1 — Evaluate tier and send emails asynchronously
+    this.evaluateAndSendAlerts(userId, systolic, diastolic).catch((err) =>
+      this.logger.error(`Failed to process BP alerts for user ${userId}`, err),
+    );
+
     return reading;
+  }
+
+  private async evaluateAndSendAlerts(
+    userId: string,
+    systolic: number,
+    diastolic: number,
+  ) {
+    const user = await this.prisma.userAuth.findUnique({
+      where: { id: userId },
+      include: {
+        profile: {
+          select: {
+            emergencyContactEmail: true,
+            emergencyContactRelationship: true,
+          },
+        },
+      },
+    });
+
+    if (!user) return;
+
+    let tier: "Urgent" | "Critical" | null = null;
+    if (systolic >= 160 || diastolic >= 110) {
+      tier = "Critical";
+    } else if (systolic >= 140 || diastolic >= 90) {
+      tier = "Urgent";
+    }
+
+    if (tier && user.email) {
+      // Send BP Alert to user
+      this.emailService.sendBPAlert(user.email, { systolic, diastolic }, tier);
+
+      // If Critical, also send to emergency contact
+      if (tier === "Critical" && user.profile?.emergencyContactEmail) {
+        this.emailService.sendEmergencyContactAlert(
+          user.profile.emergencyContactEmail,
+          user.profile.emergencyContactRelationship || "Emergency Contact",
+          "MaternAlert User", // We don't have user name in UserAuth, we'd need to fetch it from profile if it exists, but UserProfile schema doesn't have name
+          { systolic, diastolic },
+        );
+      }
+    }
   }
 
   /**

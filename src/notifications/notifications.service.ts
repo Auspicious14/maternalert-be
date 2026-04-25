@@ -2,7 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { Cron, CronExpression } from "@nestjs/schedule";
 import { PrismaService } from "../database/prisma.service";
-import { EmailService } from "./email.service";
+import { EmailService } from "../email/email.service";
 import { CarePriority } from "../care-priority/types/care-priority.types";
 import { NotificationType } from "@prisma/client";
 import type { ExpoPushMessage } from "expo-server-sdk";
@@ -432,19 +432,11 @@ export class NotificationsService {
     });
 
     if (email) {
-      const html = generateEmailHtml(
-        template.subject,
-        template.body,
-        "View Trends",
-        `${this.configService.get("FRONTEND_URL")}/(tabs)/tracking`,
-        "#FF9B3E",
-      );
-
-      await this.emailService.sendEmail(
+      await this.emailService.sendTrendAlert(
         email,
-        template.subject,
+        trendType,
         template.body,
-        html,
+        "Mama" // Default for now
       );
     }
   }
@@ -699,56 +691,64 @@ export class NotificationsService {
 
   /**
    * Send reset password notification
+   *
    */
   async sendResetPasswordNotification(
-    userId: string,
-    token: string,
-  ): Promise<void> {
-    const template = AUTH_TEMPLATES.RESET_PASSWORD;
-    const email = await this.getUserEmail(userId);
+  userId: string,
+  token: string,
+): Promise<void> {
+  const template = AUTH_TEMPLATES.RESET_PASSWORD;
+  const email = await this.getUserEmail(userId);
 
-    this.logger.log(
-      `[AUTH] Reset password request for user ${userId}. Email: ${email || "N/A"}`,
+  this.logger.log(
+    `[AUTH] Reset password request for user ${userId}. Email: ${email || 'N/A'}`,
+  );
+
+  // ── HTTPS Fallback URL for the redirect page ──
+  // This points to the web-based redirector which then tries to open the app
+  const resetUrl = `${this.configService.get('FRONTEND_URL')}/reset-password?token=${token}`;
+
+  // Store in database
+  await this.prisma.notification.create({
+    data: {
+      userId,
+      type: NotificationType.REMINDER,
+      title: template.subject,
+      message: template.body,
+    },
+  });
+
+  // Send email if user has one
+  if (email) {
+    const html = generateEmailHtml(
+      template.title,        
+      template.body,
+      template.callToAction, 
+      resetUrl,              
+      '#1E6BFF',
     );
 
-    const resetLink = `${this.configService.get("FRONTEND_URL")}/reset-password?token=${token}`;
-    const message = `${template.body}\n\nReset Link: ${resetLink}`;
-
-    // Store in database
-    await this.prisma.notification.create({
-      data: {
-        userId,
-        type: NotificationType.REMINDER,
-        title: template.subject,
-        message,
-      },
-    });
-
-    // Send actual email if available
-    if (email) {
-      const html = generateEmailHtml(
-        template.subject,
-        template.body,
-        "Reset Password",
-        resetLink,
-        "#1E6BFF", // Use setup blue for auth actions
-      );
-
-      await this.emailService.sendEmail(email, template.subject, message, html);
-    }
-
-    // Send Push
-    await this.sendPushNotification(
-      userId,
+    await this.emailService.sendEmail(
+      email,
       template.subject,
       template.body,
-      { type: "SESSION_EXPIRY" }, // Using session expiry as a proxy for generic auth actions
-    );
-
-    this.logger.log(
-      `✅ Reset password notification handled for user ${userId}`,
+      html,
     );
   }
+
+  // Push notification — tapping it opens the login screen
+  // (user will need to use the email link to reset, push is just an alert)
+  await this.sendPushNotification(
+    userId,
+    template.subject,
+    'Tap to open MaternAlert and follow the link in your email.',
+    { type: 'SESSION_EXPIRY' },
+  );
+
+  this.logger.log(
+    `✅ Reset password notification handled for user ${userId}`,
+  );
+}
 
   /**
    * Register push token for user

@@ -13,6 +13,7 @@ import { NotificationsModule } from "./notifications/notifications.module";
 import { EducationModule } from "./education/education.module";
 import { ClinicFinderModule } from "./clinic-finder/clinic-finder.module";
 import { MonitoringEngineModule } from "./monitoring-engine/monitoring-engine.module";
+import { EmailModule } from "./email/email.module";
 import { AppController } from "./app.controller";
 import { HealthController } from "./health.controller";
 
@@ -48,6 +49,7 @@ import { HealthController } from "./health.controller";
     EducationModule,
     ClinicFinderModule,
     MonitoringEngineModule,
+    EmailModule,
   ],
   controllers: [AppController, HealthController],
   providers: [

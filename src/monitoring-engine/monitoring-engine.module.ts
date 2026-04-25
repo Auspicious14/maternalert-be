@@ -1,23 +1,21 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { MonitoringEngineService } from './monitoring-engine.service';
 import { MonitoringEngineController } from './monitoring-engine.controller';
-import { PrismaService } from '../database/prisma.service';
-import { BloodPressureService } from '../blood-pressure/blood-pressure.service';
-import { SymptomsService } from '../symptoms/symptoms.service';
-import { UserProfileService } from '../user-profile/user-profile.service';
 import { MonitoringSchedulerService } from './monitoring-scheduler.service';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { UserProfileModule } from '../user-profile/user-profile.module';
-import { ScheduleModule } from '@nestjs/schedule';
+import { BloodPressureModule } from '../blood-pressure/blood-pressure.module';
+import { SymptomsModule } from '../symptoms/symptoms.module';
 
 @Module({
-  imports: [NotificationsModule, UserProfileModule, ScheduleModule.forRoot()],
+  imports: [
+    NotificationsModule,
+    UserProfileModule,
+    forwardRef(() => BloodPressureModule),
+    SymptomsModule,
+  ],
   providers: [
     MonitoringEngineService,
-    PrismaService,
-    BloodPressureService,
-    SymptomsService,
-    UserProfileService,
     MonitoringSchedulerService,
   ],
   controllers: [MonitoringEngineController],

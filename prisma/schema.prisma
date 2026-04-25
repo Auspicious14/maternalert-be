@@ -146,6 +146,7 @@ model UserProfile {
   firstPregnancy    Boolean
   knownConditions   KnownCondition[] // Array of enumerated conditions
   emergencyContactPhone         String?                       // Phone number only (no name)
+  emergencyContactEmail         String?                       // Email address for emergency alerts
   emergencyContactRelationship  EmergencyContactRelationship? // Relationship enum (e.g. MIDWIFE, PARTNER)
   
   // Clinic Information
